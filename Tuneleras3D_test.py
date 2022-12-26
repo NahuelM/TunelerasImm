@@ -9,6 +9,8 @@ import psycopg2
 from psycopg2.extensions import AsIs
 import math
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 connectPG = psycopg2.connect("dbname=PGSEPS user=postgres password=eps host=10.60.0.245")            
 cursorPG = connectPG.cursor()
@@ -90,6 +92,8 @@ def rotate_z(angle):
     [s, c, 0],
     [0, 0, 1]]
 
+
+
 #DIBUJA COTA DE TERRENO
 #points = [(cotaInicial[0][0], cotaInicial[0][0], cotaInicial[0][1]), (cotaFinal[0][0], cotaFinal[0][0] + datos[0][6], cotaFinal[0][1]), (cotaInicial[0][0] + 15, cotaInicial[0][0] + 15, cotaInicial[0][1])]
 points = [(0, 0, cotaInicial[0][0]), (datos[0][6] / 2, 15, (cotaInicial[0][0] + cotaFinal[0][0]) / 2), (datos[0][6], 0, cotaFinal[0][0])]
@@ -109,7 +113,7 @@ d = np.dot(normalPlanoTerreno, points[0])
 #print(f"{a}x {b}y {c}z {d} = 0")
 
 # Genera una malla de puntos en el plano
-X, Y = np.meshgrid(np.linspace(-5, datos[0][6], 50), np.linspace(-5, datos[0][6], 50))
+X, Y = np.meshgrid(np.linspace(-5, datos[0][6] / 4, 50), np.linspace(-5, datos[0][6] / 4, 50))
 Z = (d - a*X - b*Y) / c
 
 # Crea un objeto de tipo "surface" y asigna los ejes x, y y z
@@ -138,7 +142,7 @@ plane = go.Surface(x = X, y = Y, z = Z, opacity = 0.5)
 
 # Crea una malla de puntos en el cilindro
 RadioTramo = diam / 2
-thetaTramo = np.linspace(0, 2 * np.pi, 20)
+thetaTramo = np.linspace(0, 2 * np.pi, 50)
 #los dos primeros parametros controlan el largo del cilindro y el tercero la cantidad de puntos para dibujarlo
 zTramo = np.linspace(-datos[0][6], 0, 20)
 thetaTramo, zTramo = np.meshgrid(thetaTramo, zTramo)
@@ -166,12 +170,29 @@ y_rotatedTramo = np.dot(rotation_matrix, np.vstack((xTramo.flatten(), yTramo.fla
 y_rotatedTramo = y_rotatedTramo[1].reshape(yTramo.shape)
 z_rotatedTramo = np.dot(rotation_matrix, np.vstack((xTramo.flatten(), yTramo.flatten(), zTramo.flatten())))
 z_rotatedTramo = z_rotatedTramo[2].reshape(zTramo.shape)
+x = [1, 1, 1, 1, -1, -1, -1, -1]
+y = [1, 1, -1, -1, 1, 1, -1, -1]
+z = [1, -1, -1, 1, 1, -1, -1, 1]
+i = [0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0, 0, 4, 4, 4, 4, 1, 2, 3, 7, 6]
+j = [1, 2, 3, 7, 5, 6, 7, 1, 1, 2, 3, 7, 5, 6, 7, 1, 5, 6, 7, 5, 6]
+k = [3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0]
 
-cylinderTramo = go.Surface(x = x_rotatedTramo  + datos[0][6], y = y_rotatedTramo + (datos[0][6] / 2), z = z_rotatedTramo  + (zarriba + diam + espesorArriba))
 
+#cylinderTramo = go.Mesh3d(x = x_rotatedTramo, y = y_rotatedTramo, z = z_rotatedTramo  + (zarriba + diam + espesorArriba), scene = 'scene1', color='blue', opacity=0.50)
+cylinderTramo = go.Mesh3d(x = xTramo, y = yTramo, z = zTramo, scene = 'scene1', color='blue', opacity=0.50)
+
+
+#cylinder = go.Surface(x = xTramo + datos[0][6], y = yTramo  + (datos[0][6] / 2), z = zTramo + (zarriba + diam + espesorArriba))
 # Añade las figuras al gráfico de Plotly
-fig = go.Figure(data = [plane, cylinderTramo, go.Scatter3d(x=[p[0] for p in points], y=[p[1] for p in points], z=[p[2] for p in points])])
+#fig = go.Figure(data = [ cylinderTramo, go.Scatter3d(x=[p[0] for p in points], y=[p[1] for p in points], z=[p[2] for p in points])])
+
+# Creamos los vértices del cilindro
+# Define el radio y la altura del cilindro
+cube =  go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k)
+print(str(cube))
+fig = go.Figure(data=[cylinderTramo, cube])
 fig.write_html("grafico.html")
+
 
 
 
