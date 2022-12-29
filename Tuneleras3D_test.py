@@ -8,6 +8,7 @@ import plotly.offline as off
 import psycopg2
 from psycopg2.extensions import AsIs
 import math
+import array
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -89,17 +90,17 @@ def rotate_z(angle):
     c = math.cos(angle)
     s = math.sin(angle)
     return [[c, -s, 0],
-    [s, c, 0],
-    [0, 0, 1]]
+            [s, c, 0],
+            [0, 0, 1]]
 
 
 
 #DIBUJA COTA DE TERRENO
 #points = [(cotaInicial[0][0], cotaInicial[0][0], cotaInicial[0][1]), (cotaFinal[0][0], cotaFinal[0][0] + datos[0][6], cotaFinal[0][1]), (cotaInicial[0][0] + 15, cotaInicial[0][0] + 15, cotaInicial[0][1])]
 points = [(0, 0, cotaInicial[0][0]), (datos[0][6] / 2, 15, (cotaInicial[0][0] + cotaFinal[0][0]) / 2), (datos[0][6], 0, cotaFinal[0][0])]
-print(str(cotaFinal))
-print(str(cotaInicial))
-print(str(datos))
+# print(str(cotaFinal))
+# print(str(cotaInicial))
+# print(str(datos))
 # Obtén los vectores de dirección del plano
 v1PlanoTerreno = np.array(points[1]) - np.array(points[0])
 v2PlanoTerreno = np.array(points[2]) - np.array(points[0])
@@ -150,47 +151,149 @@ xTramo = RadioTramo * np.cos(thetaTramo)
 yTramo = RadioTramo * np.sin(thetaTramo) 
 
 
-"""# Calcula el producto punto de v1 y v2
-dot_product = sum(v1[i] * v2[i] for i in range(3))
+# Coordenadas del centro de la circunferencia
+x1 = 0
+y1 = 0
+z1 = 0
+x2 = 0.54
+y2 = 0
+z2 = 3
+n = 31
 
-# Calcula la magnitud de v1 y v2
-magnitude_v1 = math.sqrt(sum(v1[i]**2 for i in range(3)))
-magnitude_v2 = math.sqrt(sum(v2[i]**2 for i in range(3)))
+# Radio de la circunferencia
+r1 = .5
+r2 = .5
+r3 = 1
 
-# Calcula el coseno del ángulo entre v1 y v2
-cos_angle = dot_product / (magnitude_v1 * magnitude_v2)
+x_c1 = [x1 + r1*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
+y_c1 = [y1 + r1*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
+z_c1 = [z1 for t in np.linspace(0, 2*np.pi, n)]
 
-# Calcula el ángulo en grados
-angle = math.degrees(math.acos(cos_angle))"""
+x_c2 = [x2 + r2*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
+y_c2 = [y2 + r2*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
+z_c2 = [z2 for t in np.linspace(0, 2*np.pi, n)]
+
+x_c3 = [x1 + r3*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
+y_c3 = [y1 + r3*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
+z_c3 = [z1 for t in np.linspace(0, 2*np.pi, n)]
+
+x_c4 = [x2 + r3*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
+y_c4 = [y2 + r3*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
+z_c4 = [z2 for t in np.linspace(0, 2*np.pi, n)]
+
 
 rotation_matrix = rotate_y(math.pi / 2)
-x_rotatedTramo = np.dot(rotation_matrix, np.vstack((xTramo.flatten(), yTramo.flatten(), zTramo.flatten())))
-x_rotatedTramo = x_rotatedTramo[0].reshape(xTramo.shape)
-y_rotatedTramo = np.dot(rotation_matrix, np.vstack((xTramo.flatten(), yTramo.flatten(), zTramo.flatten())))
-y_rotatedTramo = y_rotatedTramo[1].reshape(yTramo.shape)
-z_rotatedTramo = np.dot(rotation_matrix, np.vstack((xTramo.flatten(), yTramo.flatten(), zTramo.flatten())))
-z_rotatedTramo = z_rotatedTramo[2].reshape(zTramo.shape)
-x = [1, 1, 1, 1, -1, -1, -1, -1]
-y = [1, 1, -1, -1, 1, 1, -1, -1]
-z = [1, -1, -1, 1, 1, -1, -1, 1]
-i = [0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0, 0, 4, 4, 4, 4, 1, 2, 3, 7, 6]
-j = [1, 2, 3, 7, 5, 6, 7, 1, 1, 2, 3, 7, 5, 6, 7, 1, 5, 6, 7, 5, 6]
-k = [3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0]
+matrizC1 = list(zip(x_c1, y_c1, z_c1))
+matrizC1 = [list(t) for t in matrizC1]
 
+matrizC2 = list(zip(x_c2, y_c2, z_c2))
+matrizC2 = [list(t) for t in matrizC2]
+
+matrizC3 = list(zip(x_c3, y_c3, z_c3))
+matrizC3 = [list(t) for t in matrizC3]
+
+matrizC4 = list(zip(x_c4, y_c4, z_c4))
+matrizC4 = [list(t) for t in matrizC4]
+
+x_rc1 = []
+y_rc1 = []
+z_rc1 = []
+
+for row in matrizC1:
+    rotated = np.dot(row, rotation_matrix)
+    x_rc1.append(rotated[0])
+    y_rc1.append(rotated[1])
+    z_rc1.append(rotated[2])
+
+x_rc2 = []
+y_rc2 = []
+z_rc2 = []
+
+for row in matrizC2:
+    rotated = np.dot(row, rotation_matrix)
+    x_rc2.append(rotated[0])
+    y_rc2.append(rotated[1])
+    z_rc2.append(rotated[2])
+
+x_rc3 = []
+y_rc3 = []
+z_rc3 = []
+
+for row in matrizC3:
+    rotated = np.dot(row, rotation_matrix)
+    x_rc3.append(rotated[0])
+    y_rc3.append(rotated[1])
+    z_rc3.append(rotated[2])    
+
+x_rc4 = []
+y_rc4 = []
+z_rc4 = []
+
+for row in matrizC4:
+    rotated = np.dot(row, rotation_matrix)
+    x_rc4.append(rotated[0])
+    y_rc4.append(rotated[1])
+    z_rc4.append(rotated[2])      
+
+
+# Crear una malla de la circunferencia
+circunferencia1 = go.Mesh3d(x = x_rc1, y = y_rc1, z = z_rc1, color = 'blue')
+
+circunferencia2 = go.Mesh3d(x = x_rc2, y = y_rc2, z = z_rc2, color = 'blue')      
+
+circunferencia3 = go.Mesh3d(x = x_rc3, y = y_rc3, z = z_rc3, color = 'red')
+
+circunferencia4 = go.Mesh3d(x = x_rc4, y = y_rc4, z = z_rc4, color = 'red')   
+
+# Coordenadas de los vértices
+xcy1 = []
+ycy1 = []
+zcy1 = []
+
+for k in range(0, int(n/1), 1):
+    xcy1 = xcy1 + [circunferencia1.x[k], circunferencia2.x[k]]
+    ycy1 = ycy1 + [circunferencia1.y[k], circunferencia2.y[k]]
+    zcy1 = zcy1 + [circunferencia1.z[k], circunferencia2.z[k]]
+
+
+ViCy1 = []
+VjCy1 = []
+VkCy1 = []
+for i in range((n*2) - 2):
+  ViCy1.append(i % ((n*2) - 1))
+  VjCy1.append((i+1) % ((n*2) - 2))
+  VkCy1.append(((i+1) % ((n*2) - 2)) + 1)
+# Crear una malla de la cara
+ladosCylinder1 = go.Mesh3d(x=xcy1, y=ycy1, z=zcy1, i = ViCy1, j = VjCy1, k = VkCy1, color = 'blue', opacity = 1)
+
+# Coordenadas de los vértices
+xcy2 = []
+ycy2 = []
+zcy2 = []
+
+for k in range(0, int(n/1), 1):
+    xcy2 = xcy2 + [circunferencia3.x[k], circunferencia4.x[k]]
+    ycy2 = ycy2 + [circunferencia3.y[k], circunferencia4.y[k]]
+    zcy2 = zcy2 + [circunferencia3.z[k], circunferencia4.z[k]]
+
+
+ViCy2 = []
+VjCy2 = []
+VkCy2 = []
+for i in range((n*2) - 2):
+  ViCy2.append(i % ((n*2) - 1))
+  VjCy2.append((i+1) % ((n*2) - 2))
+  VkCy2.append(((i+1) % ((n*2) - 2)) + 1)
+# Crear una malla de la cara
+ladosCylinder2 = go.Mesh3d(x=xcy2, y=ycy2, z=zcy2, i = ViCy2, j = VjCy2, k = VkCy2, color = 'red', opacity = .5)
 
 #cylinderTramo = go.Mesh3d(x = x_rotatedTramo, y = y_rotatedTramo, z = z_rotatedTramo  + (zarriba + diam + espesorArriba), scene = 'scene1', color='blue', opacity=0.50)
-cylinderTramo = go.Mesh3d(x = xTramo, y = yTramo, z = zTramo, scene = 'scene1', color='blue', opacity=0.50)
 
 
-#cylinder = go.Surface(x = xTramo + datos[0][6], y = yTramo  + (datos[0][6] / 2), z = zTramo + (zarriba + diam + espesorArriba))
-# Añade las figuras al gráfico de Plotly
-#fig = go.Figure(data = [ cylinderTramo, go.Scatter3d(x=[p[0] for p in points], y=[p[1] for p in points], z=[p[2] for p in points])])
 
-# Creamos los vértices del cilindro
-# Define el radio y la altura del cilindro
-cube =  go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k)
-print(str(cube))
-fig = go.Figure(data=[cylinderTramo, cube])
+
+fig = go.Figure(data=[ladosCylinder1, ladosCylinder2])
+
 fig.write_html("grafico.html")
 
 
