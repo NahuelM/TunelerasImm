@@ -1,21 +1,16 @@
-import plotly.express as px
+
 import plotly.graph_objects as go
-import plotly 
-from plotly.graph_objs import Mesh3d
 from plotly.subplots import make_subplots
 import plotly.offline as off
 
 import psycopg2
 from psycopg2.extensions import AsIs
 import math
-import array
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 connectPG = psycopg2.connect("dbname=PGSEPS user=postgres password=eps host=10.60.0.245")            
 cursorPG = connectPG.cursor()
-idTramo = "97"
+idTramo = "98"
 # datos del tramo
 cursorPG.execute("""SELECT tipotra, tiposec, GREATEST(dim1,dim2), LEAST(dim1,dim2), zarriba, zabajo, longitud FROM public."SS_Tramos"
                     WHERE CAST(id AS character varying) = '%s';""", (AsIs(idTramo),))
@@ -59,11 +54,11 @@ else:
     espesorAbajo = 0.3
 
 
-y1 = zarriba - factor*diam - espesorAbajo
-y2 = zabajo - factor*diam - espesorAbajo
+yRedZone1 = zarriba - factor*diam - espesorAbajo
+yRedZone2 = zabajo - factor*diam - espesorAbajo
 
-y12 = diam + zarriba + factor*diam + espesorArriba
-y22 = diam + zabajo + factor*diam + espesorArriba
+yRedZone12 = diam + zarriba + factor*diam + espesorArriba
+yRedZone22 = diam + zabajo + factor*diam + espesorArriba
 
 a = datos[0][4] - datos[0][5]
 b = datos[0][6]
@@ -96,32 +91,26 @@ def rotate_z(angle):
 
 
 #DIBUJA COTA DE TERRENO
-#points = [(cotaInicial[0][0], cotaInicial[0][0], cotaInicial[0][1]), (cotaFinal[0][0], cotaFinal[0][0] + datos[0][6], cotaFinal[0][1]), (cotaInicial[0][0] + 15, cotaInicial[0][0] + 15, cotaInicial[0][1])]
 points = [(0, 0, cotaInicial[0][0]), (datos[0][6] / 2, 15, (cotaInicial[0][0] + cotaFinal[0][0]) / 2), (datos[0][6], 0, cotaFinal[0][0])]
-# print(str(cotaFinal))
-# print(str(cotaInicial))
-# print(str(datos))
-# Obtén los vectores de dirección del plano
 v1PlanoTerreno = np.array(points[1]) - np.array(points[0])
 v2PlanoTerreno = np.array(points[2]) - np.array(points[0])
 #normal = np.cross(v1, v2)
 normalPlanoTerreno = [v1PlanoTerreno[1] * v2PlanoTerreno[2] - v1PlanoTerreno[2] * v2PlanoTerreno[1],
-          v1PlanoTerreno[2] * v2PlanoTerreno[0] - v1PlanoTerreno[0] * v2PlanoTerreno[2],
-          v1PlanoTerreno[0] * v2PlanoTerreno[1] - v1PlanoTerreno[1] * v2PlanoTerreno[0]
-]
+                      v1PlanoTerreno[2] * v2PlanoTerreno[0] - v1PlanoTerreno[0] * v2PlanoTerreno[2],
+                      v1PlanoTerreno[0] * v2PlanoTerreno[1] - v1PlanoTerreno[1] * v2PlanoTerreno[0]
+                     ]
 a, b, c = normalPlanoTerreno
 d = np.dot(normalPlanoTerreno, points[0])
 #print(f"{a}x {b}y {c}z {d} = 0")
 
 # Genera una malla de puntos en el plano
-X, Y = np.meshgrid(np.linspace(-5, datos[0][6] / 4, 50), np.linspace(-5, datos[0][6] / 4, 50))
+X, Y = np.meshgrid(np.linspace(0, datos[0][6], 10), np.linspace(-15, 15, 10))
 Z = (d - a*X - b*Y) / c
 
 # Crea un objeto de tipo "surface" y asigna los ejes x, y y z
 plane = go.Surface(x = X, y = Y, z = Z, opacity = 0.5) 
+terreno = go.Mesh3d(x = X, y=Y, z=Z, color='gray', opacity=.8)
 
-
-#print(str(points))
 #DIBUJA COLECTOR
 #label='Limite tunelera abajo'
 #plt.plot([0, xf], [y1, y2], color = 'r', marker = 'o')
@@ -130,40 +119,32 @@ plane = go.Surface(x = X, y = Y, z = Z, opacity = 0.5)
  # DIBUJA TRAMO-
 #plt.plot([0, xf], [zarriba+diam+espesorArriba, zabajo + diam + espesorArriba], linestyle = linestyles[0], marker = '>', color = 'b')
 #plt.plot([0, xf], [zarriba-espesorAbajo, zabajo - espesorAbajo], linestyle = linestyles[0], marker = '>', color = 'b')
-#print(str(zarriba+diam+espesorArriba) + " " + str(zarriba-espesorAbajo) + " " + str(zabajo + diam + espesorArriba) + " " + str( zabajo - espesorAbajo))
-#print(str(((zarriba+diam+espesorArriba) - (zabajo + diam + espesorArriba)) / 1) + " " + str(xf))
-#zarriba+diam+espesorArriba = y1 de tramo
-#zarriba-espesorAbajo = y12 de tramo
 
-#print(str(y1) + " " + str(y2) + " " + str(y12) + " " + str(y22))
-# y1 de zona roja
-# y2 de zona roja
-# y12 de zona roja
-# y22 de zona roja
-
-# Crea una malla de puntos en el cilindro
-RadioTramo = diam / 2
-thetaTramo = np.linspace(0, 2 * np.pi, 50)
-#los dos primeros parametros controlan el largo del cilindro y el tercero la cantidad de puntos para dibujarlo
-zTramo = np.linspace(-datos[0][6], 0, 20)
-thetaTramo, zTramo = np.meshgrid(thetaTramo, zTramo)
-xTramo = RadioTramo * np.cos(thetaTramo)
-yTramo = RadioTramo * np.sin(thetaTramo) 
 
 
 # Coordenadas del centro de la circunferencia
-x1 = 0
+x1 = ((zarriba + diam + espesorArriba) + (zarriba - espesorAbajo))/2 #Las coordenadas en x pasan a ser la altura al rotar los objectos, ya que rotan en local y sus ejes tambien rotan
 y1 = 0
-z1 = 0
-x2 = 0.54
-y2 = 0
-z2 = 3
-n = 31
+z1 = 0 #Las coordenadas en z pasan a ser el eje x
 
+x2 = ((zabajo + diam + espesorArriba) + (zabajo - espesorAbajo)) / 2
+y2 = 0
+z2 = -xf
+
+x3 = (yRedZone1 + yRedZone12) / 2
+y3 = 0
+z3 = 0
+
+x4 = (yRedZone2 + yRedZone22) / 2
+y4 = 0
+z4 = -xf
+
+n = 101
 # Radio de la circunferencia
-r1 = .5
-r2 = .5
-r3 = 1
+r1 = (zarriba + diam + espesorArriba) - x1
+r2 = (zabajo + diam + espesorArriba) - x2
+r3 = yRedZone1 - x3
+r4 = yRedZone2 - x4
 
 x_c1 = [x1 + r1*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
 y_c1 = [y1 + r1*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
@@ -173,13 +154,13 @@ x_c2 = [x2 + r2*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
 y_c2 = [y2 + r2*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
 z_c2 = [z2 for t in np.linspace(0, 2*np.pi, n)]
 
-x_c3 = [x1 + r3*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
-y_c3 = [y1 + r3*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
-z_c3 = [z1 for t in np.linspace(0, 2*np.pi, n)]
+x_c3 = [x3 + r3*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
+y_c3 = [y3 + r3*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
+z_c3 = [z3 for t in np.linspace(0, 2*np.pi, n)]
 
-x_c4 = [x2 + r3*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
-y_c4 = [y2 + r3*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
-z_c4 = [z2 for t in np.linspace(0, 2*np.pi, n)]
+x_c4 = [x4 + r4*np.cos(t) for t in np.linspace(0, 2*np.pi, n)]
+y_c4 = [y4 + r4*np.sin(t) for t in np.linspace(0, 2*np.pi, n)]
+z_c4 = [z4 for t in np.linspace(0, 2*np.pi, n)]
 
 
 rotation_matrix = rotate_y(math.pi / 2)
@@ -264,7 +245,7 @@ for i in range((n*2) - 2):
   VjCy1.append((i+1) % ((n*2) - 2))
   VkCy1.append(((i+1) % ((n*2) - 2)) + 1)
 # Crear una malla de la cara
-ladosCylinder1 = go.Mesh3d(x=xcy1, y=ycy1, z=zcy1, i = ViCy1, j = VjCy1, k = VkCy1, color = 'blue', opacity = 1)
+ladosCylinder1 = go.Mesh3d(x=xcy1, y=ycy1, z=zcy1, i = ViCy1, j = VjCy1, k = VkCy1, color = 'gray', opacity = 1)
 
 # Coordenadas de los vértices
 xcy2 = []
@@ -285,15 +266,13 @@ for i in range((n*2) - 2):
   VjCy2.append((i+1) % ((n*2) - 2))
   VkCy2.append(((i+1) % ((n*2) - 2)) + 1)
 # Crear una malla de la cara
-ladosCylinder2 = go.Mesh3d(x=xcy2, y=ycy2, z=zcy2, i = ViCy2, j = VjCy2, k = VkCy2, color = 'red', opacity = .5)
+ladosCylinder2 = go.Mesh3d(x=xcy2, y=ycy2, z=zcy2, i = ViCy2, j = VjCy2, k = VkCy2, color = 'red', opacity = .25)
 
 #cylinderTramo = go.Mesh3d(x = x_rotatedTramo, y = y_rotatedTramo, z = z_rotatedTramo  + (zarriba + diam + espesorArriba), scene = 'scene1', color='blue', opacity=0.50)
 
 
 
-
-fig = go.Figure(data=[ladosCylinder1, ladosCylinder2])
-
+fig = go.Figure(data=[ladosCylinder1, ladosCylinder2, terreno, plane])
 fig.write_html("grafico.html")
 
 
