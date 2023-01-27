@@ -1,0 +1,43 @@
+#MainLabel{
+    display: flex;
+    border: 0;
+}
+#InputLabel{
+    width: 12rem;
+    /* flex-basis: 20%; */
+    flex-grow: 0;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    border: #04AA6D;
+}
+.Input{
+    width: 10rem;
+    padding: '12px 20px';
+    margin: '8px 0';
+    border-radius: '4px';
+}
+#Graficos{
+    flex-grow: 1;
+    display: flex;
+}
+#graph2D{
+    width: 30rem;
+    height: 30rem;
+}
+#graph3D{
+    flex-grow: 1;
+}
+.label{
+    font-size: 14;
+}
+.Button{
+    background-color: #04AA6D;
+    border: none;
+    color: white;
+    padding: 16px 32px; 
+    text-decoration: none; 
+    margin: 4px 2px;
+    cursor: pointer;
+}
