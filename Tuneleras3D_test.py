@@ -7,6 +7,7 @@ import psycopg2
 from psycopg2.extensions import AsIs
 import math
 import numpy as np
+from scipy.spatial import HalfspaceIntersection, Delaunay
 from flask import send_from_directory
 import os
 
@@ -347,11 +348,16 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
             xDisEsquina = disEsquina - distanciaInicial[0][0]
 
         profundidadReltaiva = cotaInicial[0][0] - (profundidadTunelera/2 + diametroTunelera/2)
-        cilindroTunelera = crearCilindroMesh3d(xDisEsquina, -profundidadReltaiva, lado/1.5, xDisEsquina, -profundidadReltaiva, -lado/1.5, diametroTunelera/2, diametroTunelera/2, '#cccccc', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
+        cilindroTunelera = crearCilindroMesh3d(xDisEsquina, -profundidadReltaiva, lado/1.5, xDisEsquina, -profundidadReltaiva, -lado/1.5, diametroTunelera/2, diametroTunelera/2, 'rgba(204, 204, 204, .15)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
         borderCilindroTun = go.Scatter3d(x = cilindroTunelera[1][0], y = cilindroTunelera[1][1], z = cilindroTunelera[1][2], mode = 'lines', marker = dict(color = 'black'))
         borderCilindroTun1 = go.Scatter3d(x = cilindroTunelera[2][0], y = cilindroTunelera[2][1], z = cilindroTunelera[2][2], mode = 'lines', marker = dict(color = 'black'))
         trayectoriaTun = go.Scatter3d(x = [xDisEsquina, xDisEsquina], y = [lado/1.5, -lado/1.5], z = [profundidadReltaiva, profundidadReltaiva], mode='lines+markers',  marker = dict(color = 'black', size = 5), line=dict(dash = 'longdashdot'))
+    
         
+    cantFrames = 35
+    yFrames = np.linspace(-lado/1.5, lado/1.5, cantFrames)
+    framesAnim = [go.Frame(data=[go.Scatter3d(x = [xDisEsquina], y = [yFrames[k]], z = [profundidadReltaiva], mode = 'markers', marker=dict(color="red", size=10))]) for k in range(cantFrames)]
+    
     anotaciones3D = go.Scatter3d(x = [xf, 0, xf / 2],
                                  y = [y2, y1, y1], 
                                  z = [x2 - r4 + .1, x1 - r3 + .1, (x2 - r4 + .1 + x1 - r3 + .1 )/2], 
@@ -410,7 +416,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
                                 mode = 'lines',
                                 line = dict(color= 'rgb(70,70,70)', width = 3))
 
-    xAux = ladosCilindroTramo[0].x + ladosCilindroTramo[0].x
+    xAux = ladosCilindroTramo[0].x + ladosCilindroTramo1[0].x
     yAux = ladosCilindroTramo[0].y + ladosCilindroTramo1[0].y
     zAux = ladosCilindroTramo[0].z + ladosCilindroTramo1[0].z
 
@@ -424,10 +430,20 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
 
     frenteColector = go.Mesh3d(x=xAux, y=yAux, z=zAux, i = np.concatenate((iAux1, iAux)), j = np.concatenate((jAux1, jAux)), k = np.concatenate((kAux1, kAux)), color = '#b5b5b5', opacity = 1, flatshading = True, intensitymode = 'cell', hovertemplate='Colector')
 
+    #crearCubeMesh3d(puntosPropuestaTuneleraArriba, '#42ff4f', .2, 'zona para perforar segun parametros ingresados', -diametroTunelera)
+    
     fig = go.Figure(data = [ladosCilindroTramo[0], ladosCilindroTramo1[0], ladosCilindroRedZone[0], crearCubeMesh3d(puntosPlanoTerreno, '#808080', 1, 'Superficie', .12),
-                            linesBorder1, linesBorder2, linesBorder3, linesBorder4, frenteColector, crearCubeMesh3d(puntosPropuestaTuneleraArriba, '#42ff4f', .2, 'zona para perforar segun parametros ingresados', -diametroTunelera)
-                           , delineadoTramoC1, delineadoTramoC2, delineadoTramo1C1, delineadoTramo1C2, delineadoRedZoneC1, delineadoRedZoneC2, borderCilindroTun, borderCilindroTun1, trayectoriaTun])
-
+                            linesBorder1, linesBorder2, linesBorder3, linesBorder4, frenteColector, 
+                            delineadoTramoC1, delineadoTramoC2, delineadoTramo1C1, delineadoTramo1C2, delineadoRedZoneC1, delineadoRedZoneC2, borderCilindroTun, borderCilindroTun1, trayectoriaTun, cilindroTunelera[0]], 
+                            frames=framesAnim, 
+                            layout = go.Layout(updatemenus=[dict(
+                                        type = "buttons",
+                                        buttons = [dict(label = "Play",
+                                        method = "animate",
+                                        args = [None, dict(frame=dict(duration=10))])])],
+                                               scene_camera = dict(eye=dict(x=-xDisEsquina, y=.5, z=.1), center = dict(x = -xDisEsquina/2, y = 0, z = -.2)))
+                    )
+    
 
     fig.update_layout(
         scene_xaxis_visible=False,
@@ -435,23 +451,23 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         scene_zaxis_visible=False,
         showlegend = False,
         scene = dict(annotations = [dict(x = xf, 
-                                    y=0, 
-                                    z= cotaInicial[0][0], 
-                                    text='Largo de colector: '+str(round(xf, 2)) + 'm' + '<br>Aguas arriba', 
-                                    arrowcolor="black",
-                                    arrowsize=2,
-                                    arrowwidth=1,
-                                    arrowhead=1,
+                                    y = 0, 
+                                    z = cotaInicial[0][0], 
+                                    text = 'Largo de colector: '+str(round(xf, 2)) + 'm' + '<br>Aguas arriba', 
+                                    arrowcolor = "black",
+                                    arrowsize = 2,
+                                    arrowwidth = 1,
+                                    arrowhead = 1,
                                     xanchor = 'left',
                                     bordercolor = '#969696', bgcolor = '#cccccc', align = 'left'
                                     ),
-                                    dict(x = xDisEsquina, y = -lado/1.5, z = cotaInicial[0][0] - profundidadTunelera, text = 'Camino para tunelera<br>Profundidad' + str(profundidadTunelera) + 'm' + 'Diametro: ' + str(diametroTunelera) + 'm',
+                                    dict(x = xDisEsquina, y = -lado/1.5, z = cotaInicial[0][0] - profundidadTunelera, text = 'Camino para tunelera<br>Profundidad' + str(profundidadTunelera) + 'm' + '<br>Diametro: ' + str(diametroTunelera) + 'm',
                                          bordercolor = '#969696', bgcolor = '#cccccc', align = 'left' )],
                      aspectmode='data',
                      ),
-        scene_camera = dict(
-            eye=dict(x=2, y=2, z=0.1)
-        )
+        # scene_camera = dict(
+        #     eye=dict(x=2, y=2, z=0.1)
+        #)
     )
     fig.layout.height = 1080
     fig.write_html("grafico.html")
