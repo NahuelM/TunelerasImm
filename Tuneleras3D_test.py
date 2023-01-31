@@ -224,12 +224,12 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
             for i in range(0, len(z_rc1)):
                 if(z_rc1[i] > cotaInicial[0][0]):
                     z_rc1[i] = z_rc1[i] - (z_rc1[i] - cotaInicial[0][0])
-                    print('punto por encima de terreno c1')
+
             
             for i in range(0, len(z_rc2)):
                 if(z_rc2[i] > cotaFinal[0][0]):
                     z_rc2[i] = z_rc2[i] - (z_rc2[i] - cotaFinal[0][0])
-                    print('punto por encima de terreno c2')
+
         # Coordenadas de los vértices
         xcy1 = []
         ycy1 = []
@@ -352,11 +352,59 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         borderCilindroTun = go.Scatter3d(x = cilindroTunelera[1][0], y = cilindroTunelera[1][1], z = cilindroTunelera[1][2], mode = 'lines', marker = dict(color = 'black'))
         borderCilindroTun1 = go.Scatter3d(x = cilindroTunelera[2][0], y = cilindroTunelera[2][1], z = cilindroTunelera[2][2], mode = 'lines', marker = dict(color = 'black'))
         trayectoriaTun = go.Scatter3d(x = [xDisEsquina, xDisEsquina], y = [lado/1.5, -lado/1.5], z = [profundidadReltaiva, profundidadReltaiva], mode='lines+markers',  marker = dict(color = 'black', size = 5), line=dict(dash = 'longdashdot'))
+
+    # pendiente = (Z1 - Z0) / (X1 - X0)
+    # Z = mX - mX1 + Z1
+    pendiente = (x4 - x3) / (y3 - z4)
+    pendiente1 = ((x4+r4) - (x3+r3)) / (y3 - z4)
     
-        
-    cantFrames = 35
-    yFrames = np.linspace(-lado/1.5, lado/1.5, cantFrames)
-    framesAnim = [go.Frame(data=[go.Scatter3d(x = [xDisEsquina], y = [yFrames[k]], z = [profundidadReltaiva], mode = 'markers', marker=dict(color="red", size=10))]) for k in range(cantFrames)]
+    def recta(X):
+        return  pendiente * X - (pendiente*y3) + x3
+    
+    def recta1(X):
+        return pendiente1 * X - (pendiente1*y3) + (x3+r3) 
+    
+    puntos_recta = go.Scatter3d(x = [xDisEsquina + diametroTunelera/2, xDisEsquina - diametroTunelera/2, xDisEsquina + diametroTunelera/2, xDisEsquina - diametroTunelera/2], 
+                                y = [0, 0, 0, 0], 
+                                z = [recta(xDisEsquina + diametroTunelera/2), recta(xDisEsquina - diametroTunelera/2), recta1(xDisEsquina + diametroTunelera/2), recta1(xDisEsquina - diametroTunelera/2)])
+    
+    #Radio de circunferencia para calcular interseccion
+    radio_circ_temporal1 = (recta1(xDisEsquina + diametroTunelera/2)) - (recta(xDisEsquina + diametroTunelera/2))
+    radio_circ_temporal2 = (recta1(xDisEsquina - diametroTunelera/2)) - (recta(xDisEsquina - diametroTunelera/2))
+    
+    
+    cilindro_temporal_interseccion = crearCilindroMesh3d(recta(xDisEsquina + diametroTunelera/2), 0,  -(xDisEsquina + diametroTunelera/2), recta(xDisEsquina - diametroTunelera/2), 0,  -(xDisEsquina - diametroTunelera/2), radio_circ_temporal1, radio_circ_temporal2, 'orange', 1, 'temporal', 'y', math.pi / 2, 'name', False)
+    Z_cota = np.concatenate((cilindro_temporal_interseccion[1][2], cilindro_temporal_interseccion[2][2])) #concatenacion de arrays con las coordenadas en Z de las circunferencias que forman el cildro
+    Y_cota = np.concatenate((cilindro_temporal_interseccion[1][1], cilindro_temporal_interseccion[2][1])) #concatenacion de arrays con las coordenadas en Y de las circunferencias que forman el cildro
+
+    cant_frames = 35
+    def interseccion_de_cilindros(cilindro_mesh) -> bool:
+        l = 0
+        no_intersecta = True
+        while l < len(cilindro_mesh[2][2]) and no_intersecta:
+            i = 0
+            while i < len(Z_cota) and no_intersecta:
+                coord_vertice_enZ = cilindro_mesh[2][2][l] #vertice del cilindro tunelera
+                coord_vertice_enY = cilindro_mesh[2][1][l]
+                no_intersecta = (coord_vertice_enZ - Z_cota[i]) > 0 or (coord_vertice_enY - Y_cota[i]) > 0
+                i += 1
+            l += 1
+        return no_intersecta
+    
+    #framesAnim = [go.Frame(data=[go.Scatter3d(x = [xDisEsquina], y = [yFrames[k]], z = [profundidadReltaiva], mode = 'markers', marker=dict(color="green", size=10))]) for k in range(cantFrames)]
+    frames_anim = []
+    k = 0
+    paso = ((-lado/1.5) - (lado/1.5)) / cant_frames
+    h = lado/1.5
+    cilindroFrame = crearCilindroMesh3d(xDisEsquina, -profundidadReltaiva, lado/1.5, xDisEsquina, -profundidadReltaiva, h, diametroTunelera/2, diametroTunelera/2, 'rgba(204, 204, 204, .75)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
+    while k <= cant_frames+1 and  interseccion_de_cilindros(cilindroFrame):
+        #frame = go.Frame(data=[go.Scatter3d(x = [xDisEsquina], y = [yFrames[k]], z = [profundidadReltaiva], mode = 'markers', marker=dict(color="green", size=10))])
+        frame = go.Frame(data = [cilindroFrame[0]])
+        cilindroFrame = crearCilindroMesh3d(xDisEsquina, -profundidadReltaiva, lado/1.5, xDisEsquina, -profundidadReltaiva, h, diametroTunelera/2, diametroTunelera/2, 'rgba(204, 204, 204, .75)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
+        frames_anim.append(frame)
+        h += paso
+        k += 1
+    
     
     anotaciones3D = go.Scatter3d(x = [xf, 0, xf / 2],
                                  y = [y2, y1, y1], 
@@ -368,7 +416,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
 
     linesAnotaciones1 = go.Scatter3d(x = [puntosPlanoTerreno[0][0], z3, puntosPlanoTerreno[0][0]], 
                                      y = [puntosPlanoTerreno[0][1], y3, puntosPlanoTerreno[0][1]],
-                                     z = [puntosPlanoTerreno[0][2], x3 - r3, (puntosPlanoTerreno[0][2] + ( x3 - r3))/2],
+                                     z = [puntosPlanoTerreno[0][2], x3 - r3, (puntosPlanoTerreno[0][2] + ( x3 - r3)) / 2],
                                      mode = 'lines+text',
                                      text = ['▲', '▼', 'Distancia de terreno a zona prohibida para perforar: ' + str(round(puntosPlanoTerreno[0][2] - ( x3 - r3), 2)) + "m"],
                                      textposition = 'middle center',
@@ -376,7 +424,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
 
     linesAnotaciones2 = go.Scatter3d(x = [puntosPlanoTerreno[2][0], xf, puntosPlanoTerreno[2][0]], 
                                      y = [puntosPlanoTerreno[2][1], y4, puntosPlanoTerreno[2][1]],
-                                     z = [puntosPlanoTerreno[2][2], x4 - r4, (puntosPlanoTerreno[2][2] + ( x4 - r4))/2],
+                                     z = [puntosPlanoTerreno[2][2], x4 - r4, (puntosPlanoTerreno[2][2] + ( x4 - r4)) / 2],
                                      mode = 'lines+text',
                                      text = ['▲', '▼', 'Distancia de terreno a zona prohibida para perforar: ' + str(round(puntosPlanoTerreno[2][2] - ( x4 - r4), 2)) + "m"],
                                      textposition = 'middle center',
@@ -388,7 +436,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
                                      mode = 'lines+text',
                                      text = ['▲', '▼', str(round(puntosPlanoTerreno[1][2] - puntosPropuestaTuneleraArriba[1][2],2)) + "m"],
                                      textposition = 'middle center',
-                                     line = dict(color= 'rgb(70,70,70)', width=2))
+                                     line = dict(color= 'rgb(70,70,70)', width = 2))
 
     offset = puntosPlanoTerreno[2][2] - (yRedZone22 + 2*r4) + .5
 
@@ -431,24 +479,29 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
     frenteColector = go.Mesh3d(x=xAux, y=yAux, z=zAux, i = np.concatenate((iAux1, iAux)), j = np.concatenate((jAux1, jAux)), k = np.concatenate((kAux1, kAux)), color = '#b5b5b5', opacity = 1, flatshading = True, intensitymode = 'cell', hovertemplate='Colector')
 
     #crearCubeMesh3d(puntosPropuestaTuneleraArriba, '#42ff4f', .2, 'zona para perforar segun parametros ingresados', -diametroTunelera)
+    puntos_cota_tunelera = go.Scatter3d(x = [xDisEsquina + diametroTunelera/2, xDisEsquina - diametroTunelera/2], 
+                                        y = [0, 0], 
+                                        z = [profundidadReltaiva, profundidadReltaiva])
     
+    
+
     fig = go.Figure(data = [ladosCilindroTramo[0], ladosCilindroTramo1[0], ladosCilindroRedZone[0], crearCubeMesh3d(puntosPlanoTerreno, '#808080', 1, 'Superficie', .12),
-                            linesBorder1, linesBorder2, linesBorder3, linesBorder4, frenteColector, 
+                            linesBorder1, linesBorder2, linesBorder3, linesBorder4, frenteColector, puntos_cota_tunelera, puntos_recta, cilindro_temporal_interseccion[0], 
                             delineadoTramoC1, delineadoTramoC2, delineadoTramo1C1, delineadoTramo1C2, delineadoRedZoneC1, delineadoRedZoneC2, borderCilindroTun, borderCilindroTun1, trayectoriaTun, cilindroTunelera[0]], 
-                            frames=framesAnim, 
+                            frames=frames_anim, 
                             layout = go.Layout(updatemenus=[dict(
-                                        type = "buttons",
-                                        buttons = [dict(label = "Play",
-                                        method = "animate",
-                                        args = [None, dict(frame=dict(duration=10))])])],
-                                               scene_camera = dict(eye=dict(x=-xDisEsquina, y=.5, z=.1), center = dict(x = -xDisEsquina/2, y = 0, z = -.2)))
+                                                type = "buttons",
+                                                buttons = [dict(label = "Play",
+                                                method = "animate",
+                                                args = [None, dict(frame=dict(duration=10))])])],
+                                                scene_camera = dict(eye=dict(x=-xDisEsquina, y=.5, z=.1), center = dict(x = -xDisEsquina/2, y = 0, z = -.2)))
                     )
     
 
     fig.update_layout(
-        scene_xaxis_visible=False,
-        scene_yaxis_visible=False,
-        scene_zaxis_visible=False,
+        scene_xaxis_visible = False,
+        scene_yaxis_visible = False,
+        scene_zaxis_visible = False,
         showlegend = False,
         scene = dict(annotations = [dict(x = xf, 
                                     y = 0, 
@@ -461,7 +514,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
                                     xanchor = 'left',
                                     bordercolor = '#969696', bgcolor = '#cccccc', align = 'left'
                                     ),
-                                    dict(x = xDisEsquina, y = -lado/1.5, z = cotaInicial[0][0] - profundidadTunelera, text = 'Camino para tunelera<br>Profundidad' + str(profundidadTunelera) + 'm' + '<br>Diametro: ' + str(diametroTunelera) + 'm',
+                                    dict(x = xDisEsquina, y = -lado/1.5, z = cotaInicial[0][0] - profundidadTunelera, text = 'Camino para tunelera<br>Profundidad: ' + str(profundidadTunelera) + 'm' + '<br>Diametro: ' + str(diametroTunelera) + 'm',
                                          bordercolor = '#969696', bgcolor = '#cccccc', align = 'left' )],
                      aspectmode='data',
                      ),
