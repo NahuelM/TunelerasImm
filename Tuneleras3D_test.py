@@ -13,54 +13,54 @@ import os
 
 
 
-def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEsquina):
+def updateGraph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina, id_esquina):
     connectPG = psycopg2.connect("dbname=PGSEPS user=postgres password=eps host=10.60.0.245")            
     cursorPG = connectPG.cursor()
     #idTramo = "100"
     # datos del tramo
     cursorPG.execute("""SELECT tipotra, tiposec, GREATEST(dim1,dim2), LEAST(dim1,dim2), zarriba, zabajo, longitud FROM public."SS_Tramos"
-                        WHERE CAST(id AS character varying) = '%s';""", (AsIs(idTramo),))
+                        WHERE CAST(id AS character varying) = '%s';""", (AsIs(id_tramo),))
                         
     datos = cursorPG.fetchall()
     #print(datos)
     # cota de terreno (punto inicial)
-    cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = (SELECT CAST((SELECT ST_X(ST_StartPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(idTramo),))
-    cotaInicial = cursorPG.fetchall()
+    cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = (SELECT CAST((SELECT ST_X(ST_StartPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
+    cota_inicial = cursorPG.fetchall()
     #print("cotaInicical: " + str(cotaInicial))
-    cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = (SELECT CAST((SELECT ST_X(ST_StartPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(idTramo),))
+    cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = (SELECT CAST((SELECT ST_X(ST_StartPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
     existe1 = cursorPG.fetchone()
     #print("existe1: " + str(existe1))
 
 
     # punto final
     cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = 
-                    (SELECT CAST((SELECT ST_X(ST_EndPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(idTramo),))
-    cotaFinal = cursorPG.fetchall()
+                    (SELECT CAST((SELECT ST_X(ST_EndPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
+    cota_final = cursorPG.fetchall()
    # print("cotaFinal: " + str(cotaFinal))
     # punto final
     cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = 
-                    (SELECT CAST((SELECT ST_X(ST_EndPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(idTramo),))
+                    (SELECT CAST((SELECT ST_X(ST_EndPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
     existe2 = cursorPG.fetchone()
     
     if (existe1 == None or existe2 == None):
         print('Error al mostrar perfil: Datos de terreno incoherentes.')
     else:
-        puntoInicial = cotaInicial[0][1]
-        puntoFinal = cotaFinal[0][1]
-        if (idEsquina != 0 ):
+        puntoInicial = cota_inicial[0][1]
+        puntoFinal = cota_final[0][1]
+        if (id_esquina != 0 ):
             cursorPG.execute("""SELECT ST_Distance(ST_GeometryN(t.geom,1),ST_GeometryN(p.geom,1)) from "SS_Puntos" p join "Cruces_Calles" t on cast(p.id as character varying) = '%s'
                             and cast(t.id as character varying) = '%s';""",
-                            (AsIs(puntoInicial), AsIs(idEsquina)))
-            distanciaInicial = cursorPG.fetchall()
+                            (AsIs(puntoInicial), AsIs(id_esquina)))
+            distancia_inicial = cursorPG.fetchall()
 
 
             cursorPG.execute("""SELECT ST_Distance(ST_GeometryN(t.geom,1),ST_GeometryN(p.geom,1)) from "SS_Puntos" p join "Cruces_Calles" t on cast(p.id as character varying) = '%s'
                             and cast(t.id as character varying) = '%s';""",
-                            (AsIs(puntoFinal), AsIs(idEsquina)))
-            distanciaFinal = cursorPG.fetchall()
+                            (AsIs(puntoFinal), AsIs(id_esquina)))
+            distancia_final = cursorPG.fetchall()
             #print(str(distanciaFinal))
             #print(str(distanciaInicial))
-            if (distanciaFinal == None or distanciaInicial == None):
+            if (distancia_final == None or distancia_inicial == None):
                 print('Error al mostrar perfil: Datos de esquina incoherentes.')
         
         connectPG.commit()
@@ -71,8 +71,8 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
     # datos = [[1, 'ART', .7, 1, 15, 20, 10]]
     # cotaFinal = [[49]]
     # distanciaEsq = disEsquina
-    distanciaInicial = [[4]]
-    distanciaFinal = [[1]]
+    distancia_inicial = [[4]]
+    distancia_final = [[1]]
 
 
     #print(str(idTramo) + " " + str(datos))
@@ -222,13 +222,13 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         ####################################################################################
         if(trunco):
             for i in range(0, len(z_rc1)):
-                if(z_rc1[i] > cotaInicial[0][0]):
-                    z_rc1[i] = z_rc1[i] - (z_rc1[i] - cotaInicial[0][0])
+                if(z_rc1[i] > cota_inicial[0][0]):
+                    z_rc1[i] = z_rc1[i] - (z_rc1[i] - cota_inicial[0][0])
 
             
             for i in range(0, len(z_rc2)):
-                if(z_rc2[i] > cotaFinal[0][0]):
-                    z_rc2[i] = z_rc2[i] - (z_rc2[i] - cotaFinal[0][0])
+                if(z_rc2[i] > cota_final[0][0]):
+                    z_rc2[i] = z_rc2[i] - (z_rc2[i] - cota_final[0][0])
 
         # Coordenadas de los vértices
         xcy1 = []
@@ -253,46 +253,46 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         return [go.Mesh3d(x = xcy1, y = ycy1, z = zcy1, i = ViCy1, j = VjCy1, k = VkCy1, color = color, opacity = opacity, flatshading = True, intensitymode = 'cell', hovertemplate=info, name = name), [x_rc1, y_rc1, z_rc1], [x_rc2, y_rc2, z_rc2]]
 
     
-    ladosCilindroTramo = crearCilindroMesh3d(x1, y1, z1, x2, y2, z2, r1, r2, '#b5b5b5', 1, 'Colector', 'y', math.pi / 2, name = 'ladoTramo1', trunco = False)
-    ladosCilindroTramo1 = crearCilindroMesh3d(x1, y1, z1, x2, y2, z2, r1 - .1, r2 - .1, '#b5b5b5', 1, 'Colector', 'y', math.pi / 2, name = 'ladoTramo2', trunco = False)
-    ladosCilindroRedZone = crearCilindroMesh3d(x3, y3, z3, x4, y4, z4, r3, r4, '#ff4255', .25, 'Zona no permitida para perforaciones', 'y', math.pi / 2, name = 'ladoRD', trunco = True)
+    caras_lados_cilindro_colector = crearCilindroMesh3d(x1, y1, z1, x2, y2, z2, r1, r2, '#b5b5b5', 1, 'Colector', 'y', math.pi / 2, name = 'ladoTramo1', trunco = False)
+    caras_lados_cilindro_colector1 = crearCilindroMesh3d(x1, y1, z1, x2, y2, z2, r1 - .1, r2 - .1, '#b5b5b5', 1, 'Colector', 'y', math.pi / 2, name = 'ladoTramo2', trunco = False)
+    caras_lados_cilindro_redzone = crearCilindroMesh3d(x3, y3, z3, x4, y4, z4, r3, r4, '#ff4255', .25, 'Zona no permitida para perforaciones', 'y', math.pi / 2, name = 'ladoRD', trunco = True)
     
-    delineadoTramoC1 = go.Scatter3d(x = ladosCilindroTramo[1][0], y = ladosCilindroTramo[1][1], z = ladosCilindroTramo[1][2], mode = 'lines', marker = dict(color = 'gray'))
-    delineadoTramoC2 = go.Scatter3d(x = ladosCilindroTramo[2][0], y = ladosCilindroTramo[2][1], z = ladosCilindroTramo[2][2], mode = 'lines', marker = dict(color = 'gray'))
+    border_colector_C1 = go.Scatter3d(x = caras_lados_cilindro_colector[1][0], y = caras_lados_cilindro_colector[1][1], z = caras_lados_cilindro_colector[1][2], mode = 'lines', marker = dict(color = 'gray'))
+    border_colector_C2 = go.Scatter3d(x = caras_lados_cilindro_colector[2][0], y = caras_lados_cilindro_colector[2][1], z = caras_lados_cilindro_colector[2][2], mode = 'lines', marker = dict(color = 'gray'))
     
-    delineadoTramo1C1 = go.Scatter3d(x = ladosCilindroTramo1[1][0], y = ladosCilindroTramo1[1][1], z = ladosCilindroTramo1[1][2], mode = 'lines', marker = dict(color = 'gray'))
-    delineadoTramo1C2 = go.Scatter3d(x = ladosCilindroTramo1[2][0], y = ladosCilindroTramo1[2][1], z = ladosCilindroTramo1[2][2], mode = 'lines', marker = dict(color = 'gray'))
+    border_colector1_C1 = go.Scatter3d(x = caras_lados_cilindro_colector1[1][0], y = caras_lados_cilindro_colector1[1][1], z = caras_lados_cilindro_colector1[1][2], mode = 'lines', marker = dict(color = 'gray'))
+    border_colector1_C2 = go.Scatter3d(x = caras_lados_cilindro_colector1[2][0], y = caras_lados_cilindro_colector1[2][1], z = caras_lados_cilindro_colector1[2][2], mode = 'lines', marker = dict(color = 'gray'))
     
-    delineadoRedZoneC1 = go.Scatter3d(x = ladosCilindroRedZone[1][0], y = ladosCilindroRedZone[1][1], z = ladosCilindroRedZone[1][2], mode = 'lines', marker = dict(color = '#b50018'))
-    delineadoRedZoneC2 = go.Scatter3d(x = ladosCilindroRedZone[2][0], y = ladosCilindroRedZone[2][1], z = ladosCilindroRedZone[2][2], mode = 'lines', marker = dict(color = '#b50018'))
+    border_redzone_C1 = go.Scatter3d(x = caras_lados_cilindro_redzone[1][0], y = caras_lados_cilindro_redzone[1][1], z = caras_lados_cilindro_redzone[1][2], mode = 'lines', marker = dict(color = '#b50018'))
+    border_redzone_C2 = go.Scatter3d(x = caras_lados_cilindro_redzone[2][0], y = caras_lados_cilindro_redzone[2][1], z = caras_lados_cilindro_redzone[2][2], mode = 'lines', marker = dict(color = '#b50018'))
     #propuesta tunelera más abajo
-    puntosPropuestaTuneleraAbajo = [(0, 0, cotaInicial[0][0]-(profundidadTunelera+0.5*diametroTunelera)), 
-                                    (datos[0][6] / 2, 15, ((cotaInicial[0][0]-(profundidadTunelera+0.5*diametroTunelera) + cotaFinal[0][0]-(profundidadTunelera+0.5*diametroTunelera))/2)), 
-                                    (datos[0][6], 0, cotaFinal[0][0]-(profundidadTunelera+0.5*diametroTunelera))
+    puntosPropuestaTuneleraAbajo = [(0, 0, cota_inicial[0][0]-(profundidad_tunelera+0.5*diametro_tunelera)), 
+                                    (datos[0][6] / 2, 15, ((cota_inicial[0][0]-(profundidad_tunelera+0.5*diametro_tunelera) + cota_final[0][0]-(profundidad_tunelera+0.5*diametro_tunelera))/2)), 
+                                    (datos[0][6], 0, cota_final[0][0]-(profundidad_tunelera+0.5*diametro_tunelera))
                                     ]
 
     #propuesta tunelera más arriba
-    puntosPropuestaTuneleraArriba = [(0, 0, cotaInicial[0][0]-(profundidadTunelera-0.5*diametroTunelera)), 
-                                    (datos[0][6] / 2, 15, ((cotaInicial[0][0]-(profundidadTunelera-0.5*diametroTunelera) + cotaFinal[0][0]-(profundidadTunelera-0.5*diametroTunelera))/2)), 
-                                    (datos[0][6], 0, cotaFinal[0][0]-(profundidadTunelera-0.5*diametroTunelera))
-                                    ]
+    puntos_propuesta_tunelera_Arriba = [(0, 0, cota_inicial[0][0]-(profundidad_tunelera-0.5*diametro_tunelera)), 
+                                        (datos[0][6] / 2, 15, ((cota_inicial[0][0]-(profundidad_tunelera-0.5*diametro_tunelera) + cota_final[0][0]-(profundidad_tunelera-0.5*diametro_tunelera))/2)), 
+                                        (datos[0][6], 0, cota_final[0][0]-(profundidad_tunelera-0.5*diametro_tunelera))
+                                        ]
     #DIBUJA COTA DE TERRENO
-    puntosPlanoTerreno = [(0, 0, cotaInicial[0][0]), 
-                        (datos[0][6] / 2, 15, (cotaInicial[0][0] + cotaFinal[0][0]) / 2), 
-                        (datos[0][6], 0, cotaFinal[0][0])
+    puntos_plano_terreno = [(0, 0, cota_inicial[0][0]), 
+                        (datos[0][6] / 2, 15, (cota_inicial[0][0] + cota_final[0][0]) / 2), 
+                        (datos[0][6], 0, cota_final[0][0])
                         ]
-    lado = 2*(puntosPlanoTerreno[2][2] - (yRedZone22 + 2*r4))
+    lado = 2*(puntos_plano_terreno[2][2] - (yRedZone22 + 2*r4))
 
-    def crearPlanoMesh3d(puntosPlano, color, opcacity, info):
+    def crearPlanoMesh3d(puntos_plano, color, opcacity, info):
         #Creo los 4 vertices del cuadrado que representan una porcion del plano que pasa por los puntos que definen al mismo 
-        vertcicesPlanoArray = [(puntosPlano[0][0], puntosPlano[0][1] + (lado/2), puntosPlano[0][2]),
-                               (puntosPlano[2][0], puntosPlano[2][1] + (lado/2), puntosPlano[2][2]),
-                               (puntosPlano[0][0], puntosPlano[0][1] - (lado/2), puntosPlano[0][2]),
-                               (puntosPlano[2][0], puntosPlano[2][1] - (lado/2), puntosPlano[2][2])
+        vertcices_planoArray = [(puntos_plano[0][0], puntos_plano[0][1] + (lado/2), puntos_plano[0][2]),
+                               (puntos_plano[2][0], puntos_plano[2][1] + (lado/2), puntos_plano[2][2]),
+                               (puntos_plano[0][0], puntos_plano[0][1] - (lado/2), puntos_plano[0][2]),
+                               (puntos_plano[2][0], puntos_plano[2][1] - (lado/2), puntos_plano[2][2])
                               ]
-        x = [v[0] for v in vertcicesPlanoArray]
-        y = [v[1] for v in vertcicesPlanoArray]
-        z = [v[2] for v in vertcicesPlanoArray]
+        x = [v[0] for v in vertcices_planoArray]
+        y = [v[1] for v in vertcices_planoArray]
+        z = [v[2] for v in vertcices_planoArray]
         i = [0, 2]
         j = [1, 3]
         k = [2, 1]
@@ -313,16 +313,16 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
     ###########################################
     # FUNCION PARA CREAR PARALEPIPEDOS RECTOS #
     ###########################################
-    def crearCubeMesh3d(puntosPlano, color, opcacity, info, extrudeDistance):
+    def crearCubeMesh3d(puntos_plano, color, opcacity, info, extrude_distance):
         #Creo los 4 vertices del cuadrado que representan una porcion del plano que pasa por los puntos que definen al mismo 
-        vertcicesPlanoArray = [(puntosPlano[0][0], puntosPlano[0][1] + (lado/2), puntosPlano[0][2]),
-                               (puntosPlano[2][0], puntosPlano[2][1] + (lado/2), puntosPlano[2][2]),
-                               (puntosPlano[0][0], puntosPlano[0][1] - (lado/2), puntosPlano[0][2]),
-                               (puntosPlano[2][0], puntosPlano[2][1] - (lado/2), puntosPlano[2][2]),
-                               (puntosPlano[0][0], puntosPlano[0][1] + (lado/2), puntosPlano[0][2] + extrudeDistance),
-                               (puntosPlano[2][0], puntosPlano[2][1] + (lado/2), puntosPlano[2][2] + extrudeDistance),
-                               (puntosPlano[0][0], puntosPlano[0][1] - (lado/2), puntosPlano[0][2] + extrudeDistance),
-                               (puntosPlano[2][0], puntosPlano[2][1] - (lado/2), puntosPlano[2][2] + extrudeDistance)
+        vertcicesPlanoArray = [(puntos_plano[0][0], puntos_plano[0][1] + (lado/2), puntos_plano[0][2]),
+                               (puntos_plano[2][0], puntos_plano[2][1] + (lado/2), puntos_plano[2][2]),
+                               (puntos_plano[0][0], puntos_plano[0][1] - (lado/2), puntos_plano[0][2]),
+                               (puntos_plano[2][0], puntos_plano[2][1] - (lado/2), puntos_plano[2][2]),
+                               (puntos_plano[0][0], puntos_plano[0][1] + (lado/2), puntos_plano[0][2] + extrude_distance),
+                               (puntos_plano[2][0], puntos_plano[2][1] + (lado/2), puntos_plano[2][2] + extrude_distance),
+                               (puntos_plano[0][0], puntos_plano[0][1] - (lado/2), puntos_plano[0][2] + extrude_distance),
+                               (puntos_plano[2][0], puntos_plano[2][1] - (lado/2), puntos_plano[2][2] + extrude_distance)
                               ]
         x = [v[0] for v in vertcicesPlanoArray]
         y = [v[1] for v in vertcicesPlanoArray]
@@ -337,24 +337,27 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         hovertemplate=info
         )
 
-    cilindroTunelera = None
-    borderCilindroTun1 = None
-    borderCilindroTun = None
-    trayectoriaTun = None
-    if (idEsquina != 0):
-        if (distanciaFinal[0][0] < distanciaInicial[0][0]):
-            xDisEsquina = distanciaInicial[0][0] - disEsquina
+    cilindro_tunelera = None
+    border_cilindro_tun1 = None
+    border_cilindro_tun = None
+    linea_trayectoria_tun = None
+    if (id_esquina != 0):
+        if (distancia_final[0][0] < distancia_inicial[0][0]):
+            x_dis_esquina = distancia_inicial[0][0] - dis_esquina
         else:
-            xDisEsquina = disEsquina - distanciaInicial[0][0]
+            x_dis_esquina = dis_esquina - distancia_inicial[0][0]
 
-        profundidadReltaiva = cotaInicial[0][0] - (profundidadTunelera/2 + diametroTunelera/2)
-        cilindroTunelera = crearCilindroMesh3d(xDisEsquina, -profundidadReltaiva, lado/1.5, xDisEsquina, -profundidadReltaiva, -lado/1.5, diametroTunelera/2, diametroTunelera/2, 'rgba(204, 204, 204, .15)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
-        borderCilindroTun = go.Scatter3d(x = cilindroTunelera[1][0], y = cilindroTunelera[1][1], z = cilindroTunelera[1][2], mode = 'lines', marker = dict(color = 'black'))
-        borderCilindroTun1 = go.Scatter3d(x = cilindroTunelera[2][0], y = cilindroTunelera[2][1], z = cilindroTunelera[2][2], mode = 'lines', marker = dict(color = 'black'))
-        trayectoriaTun = go.Scatter3d(x = [xDisEsquina, xDisEsquina], y = [lado/1.5, -lado/1.5], z = [profundidadReltaiva, profundidadReltaiva], mode='lines+markers',  marker = dict(color = 'black', size = 5), line=dict(dash = 'longdashdot'))
+        profundidad_reltaiva = cota_inicial[0][0] - (profundidad_tunelera/2 + diametro_tunelera/2)
+        cilindro_tunelera = crearCilindroMesh3d(x_dis_esquina, -profundidad_reltaiva, lado/1.5, x_dis_esquina, -profundidad_reltaiva, -lado/1.5, diametro_tunelera/2, diametro_tunelera/2, 'rgba(204, 204, 204, .15)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
+        border_cilindro_tun = go.Scatter3d(x = cilindro_tunelera[1][0], y = cilindro_tunelera[1][1], z = cilindro_tunelera[1][2], mode = 'lines', marker = dict(color = 'black'))
+        border_cilindro_tun1 = go.Scatter3d(x = cilindro_tunelera[2][0], y = cilindro_tunelera[2][1], z = cilindro_tunelera[2][2], mode = 'lines', marker = dict(color = 'black'))
+        linea_trayectoria_tun = go.Scatter3d(x = [x_dis_esquina, x_dis_esquina], y = [lado/1.5, -lado/1.5], z = [profundidad_reltaiva, profundidad_reltaiva], mode='lines+markers',  marker = dict(color = 'black', size = 5), line=dict(dash = 'longdashdot'))
 
     # pendiente = (Z1 - Z0) / (X1 - X0)
     # Z = mX - mX1 + Z1
+    ##############################################
+    #######    ANIMACION DE TUNELERA    ##########
+    ##############################################
     pendiente = (x4 - x3) / (y3 - z4)
     pendiente1 = ((x4+r4) - (x3+r3)) / (y3 - z4)
     
@@ -364,20 +367,22 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
     def recta1(X):
         return pendiente1 * X - (pendiente1*y3) + (x3+r3) 
     
-    puntos_recta = go.Scatter3d(x = [xDisEsquina + diametroTunelera/2, xDisEsquina - diametroTunelera/2, xDisEsquina + diametroTunelera/2, xDisEsquina - diametroTunelera/2], 
+    puntos_recta = go.Scatter3d(x = [x_dis_esquina + diametro_tunelera/2, x_dis_esquina - diametro_tunelera/2, x_dis_esquina + diametro_tunelera/2, x_dis_esquina - diametro_tunelera/2], 
                                 y = [0, 0, 0, 0], 
-                                z = [recta(xDisEsquina + diametroTunelera/2), recta(xDisEsquina - diametroTunelera/2), recta1(xDisEsquina + diametroTunelera/2), recta1(xDisEsquina - diametroTunelera/2)])
+                                z = [recta(x_dis_esquina + diametro_tunelera/2), recta(x_dis_esquina - diametro_tunelera/2), recta1(x_dis_esquina + diametro_tunelera/2), recta1(x_dis_esquina - diametro_tunelera/2)])
     
     #Radio de circunferencia para calcular interseccion
-    radio_circ_temporal1 = (recta1(xDisEsquina + diametroTunelera/2)) - (recta(xDisEsquina + diametroTunelera/2))
-    radio_circ_temporal2 = (recta1(xDisEsquina - diametroTunelera/2)) - (recta(xDisEsquina - diametroTunelera/2))
+    radio_circ_temporal1 = (recta1(x_dis_esquina + diametro_tunelera/2)) - (recta(x_dis_esquina + diametro_tunelera/2))
+    radio_circ_temporal2 = (recta1(x_dis_esquina - diametro_tunelera/2)) - (recta(x_dis_esquina - diametro_tunelera/2))
     
     
-    cilindro_temporal_interseccion = crearCilindroMesh3d(recta(xDisEsquina + diametroTunelera/2), 0,  -(xDisEsquina + diametroTunelera/2), recta(xDisEsquina - diametroTunelera/2), 0,  -(xDisEsquina - diametroTunelera/2), radio_circ_temporal1, radio_circ_temporal2, 'orange', 1, 'temporal', 'y', math.pi / 2, 'name', False)
+    cilindro_temporal_interseccion = crearCilindroMesh3d(recta(x_dis_esquina + diametro_tunelera/2), 0,  -(x_dis_esquina + diametro_tunelera/2), recta(x_dis_esquina - diametro_tunelera/2), 0,  -(x_dis_esquina - diametro_tunelera/2), radio_circ_temporal1, radio_circ_temporal2, 'orange', 1, 'temporal', 'y', math.pi / 2, 'name', False)
     Z_cota = np.concatenate((cilindro_temporal_interseccion[1][2], cilindro_temporal_interseccion[2][2])) #concatenacion de arrays con las coordenadas en Z de las circunferencias que forman el cildro
     Y_cota = np.concatenate((cilindro_temporal_interseccion[1][1], cilindro_temporal_interseccion[2][1])) #concatenacion de arrays con las coordenadas en Y de las circunferencias que forman el cildro
 
     cant_frames = 35
+    switch_aux = 1 if profundidad_reltaiva > recta(x_dis_esquina) else -1
+    #O(cantidad de vertices de circunferencia tunelera * cantidad de vertices de circunferencia cilindro rojo * 2) cantidad de iteraciones
     def interseccion_de_cilindros(cilindro_mesh) -> bool:
         l = 0
         no_intersecta = True
@@ -386,7 +391,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
             while i < len(Z_cota) and no_intersecta:
                 coord_vertice_enZ = cilindro_mesh[2][2][l] #vertice del cilindro tunelera
                 coord_vertice_enY = cilindro_mesh[2][1][l]
-                no_intersecta = (coord_vertice_enZ - Z_cota[i]) > 0 or (coord_vertice_enY - Y_cota[i]) > 0
+                no_intersecta = (coord_vertice_enZ - Z_cota[i])*switch_aux > 0 or (coord_vertice_enY - Y_cota[i]) > 0
                 i += 1
             l += 1
         return no_intersecta
@@ -396,16 +401,18 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
     k = 0
     paso = ((-lado/1.5) - (lado/1.5)) / cant_frames
     h = lado/1.5
-    cilindroFrame = crearCilindroMesh3d(xDisEsquina, -profundidadReltaiva, lado/1.5, xDisEsquina, -profundidadReltaiva, h, diametroTunelera/2, diametroTunelera/2, 'rgba(204, 204, 204, .75)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
-    while k <= cant_frames+1 and  interseccion_de_cilindros(cilindroFrame):
+    cilindro_Frame = crearCilindroMesh3d(x_dis_esquina, -profundidad_reltaiva, lado/1.5, x_dis_esquina, -profundidad_reltaiva, h, diametro_tunelera/2, diametro_tunelera/2, 'rgba(204, 204, 204, .75)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
+    while k <= cant_frames+1 and  interseccion_de_cilindros(cilindro_Frame):
         #frame = go.Frame(data=[go.Scatter3d(x = [xDisEsquina], y = [yFrames[k]], z = [profundidadReltaiva], mode = 'markers', marker=dict(color="green", size=10))])
-        frame = go.Frame(data = [cilindroFrame[0]])
-        cilindroFrame = crearCilindroMesh3d(xDisEsquina, -profundidadReltaiva, lado/1.5, xDisEsquina, -profundidadReltaiva, h, diametroTunelera/2, diametroTunelera/2, 'rgba(204, 204, 204, .75)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
+        frame = go.Frame(data = [cilindro_Frame[0]])
+        cilindro_Frame = crearCilindroMesh3d(x_dis_esquina, -profundidad_reltaiva, lado/1.5, x_dis_esquina, -profundidad_reltaiva, h, diametro_tunelera/2, diametro_tunelera/2, 'rgba(204, 204, 204, .75)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False)
         frames_anim.append(frame)
         h += paso
         k += 1
     
-    
+    ##############################################
+    #######    ANOTACIONES              ##########
+    ##############################################
     anotaciones3D = go.Scatter3d(x = [xf, 0, xf / 2],
                                  y = [y2, y1, y1], 
                                  z = [x2 - r4 + .1, x1 - r3 + .1, (x2 - r4 + .1 + x1 - r3 + .1 )/2], 
@@ -414,59 +421,59 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
                                  textposition='middle center', 
                                  line=dict(color= 'rgb(70,70,70)', width=2))
 
-    linesAnotaciones1 = go.Scatter3d(x = [puntosPlanoTerreno[0][0], z3, puntosPlanoTerreno[0][0]], 
-                                     y = [puntosPlanoTerreno[0][1], y3, puntosPlanoTerreno[0][1]],
-                                     z = [puntosPlanoTerreno[0][2], x3 - r3, (puntosPlanoTerreno[0][2] + ( x3 - r3)) / 2],
+    linesAnotaciones1 = go.Scatter3d(x = [puntos_plano_terreno[0][0], z3, puntos_plano_terreno[0][0]], 
+                                     y = [puntos_plano_terreno[0][1], y3, puntos_plano_terreno[0][1]],
+                                     z = [puntos_plano_terreno[0][2], x3 - r3, (puntos_plano_terreno[0][2] + ( x3 - r3)) / 2],
                                      mode = 'lines+text',
-                                     text = ['▲', '▼', 'Distancia de terreno a zona prohibida para perforar: ' + str(round(puntosPlanoTerreno[0][2] - ( x3 - r3), 2)) + "m"],
+                                     text = ['▲', '▼', 'Distancia de terreno a zona prohibida para perforar: ' + str(round(puntos_plano_terreno[0][2] - ( x3 - r3), 2)) + "m"],
                                      textposition = 'middle center',
                                      line = dict(color= 'rgb(70,70,70)', width=2))
 
-    linesAnotaciones2 = go.Scatter3d(x = [puntosPlanoTerreno[2][0], xf, puntosPlanoTerreno[2][0]], 
-                                     y = [puntosPlanoTerreno[2][1], y4, puntosPlanoTerreno[2][1]],
-                                     z = [puntosPlanoTerreno[2][2], x4 - r4, (puntosPlanoTerreno[2][2] + ( x4 - r4)) / 2],
+    linesAnotaciones2 = go.Scatter3d(x = [puntos_plano_terreno[2][0], xf, puntos_plano_terreno[2][0]], 
+                                     y = [puntos_plano_terreno[2][1], y4, puntos_plano_terreno[2][1]],
+                                     z = [puntos_plano_terreno[2][2], x4 - r4, (puntos_plano_terreno[2][2] + ( x4 - r4)) / 2],
                                      mode = 'lines+text',
-                                     text = ['▲', '▼', 'Distancia de terreno a zona prohibida para perforar: ' + str(round(puntosPlanoTerreno[2][2] - ( x4 - r4), 2)) + "m"],
+                                     text = ['▲', '▼', 'Distancia de terreno a zona prohibida para perforar: ' + str(round(puntos_plano_terreno[2][2] - ( x4 - r4), 2)) + "m"],
                                      textposition = 'middle center',
                                      line = dict(color= 'rgb(70,70,70)', width=2))
 
     linesAnotaciones3 = go.Scatter3d(x = [xf / 2, xf / 2, xf/2], 
                                      y = [0, 0, 0],
-                                     z = [puntosPlanoTerreno[1][2], puntosPropuestaTuneleraArriba[1][2], (puntosPlanoTerreno[1][2] + puntosPropuestaTuneleraArriba[1][2])/2],
+                                     z = [puntos_plano_terreno[1][2], puntos_propuesta_tunelera_Arriba[1][2], (puntos_plano_terreno[1][2] + puntos_propuesta_tunelera_Arriba[1][2])/2],
                                      mode = 'lines+text',
-                                     text = ['▲', '▼', str(round(puntosPlanoTerreno[1][2] - puntosPropuestaTuneleraArriba[1][2],2)) + "m"],
+                                     text = ['▲', '▼', str(round(puntos_plano_terreno[1][2] - puntos_propuesta_tunelera_Arriba[1][2],2)) + "m"],
                                      textposition = 'middle center',
                                      line = dict(color= 'rgb(70,70,70)', width = 2))
 
-    offset = puntosPlanoTerreno[2][2] - (yRedZone22 + 2*r4) + .5
+    offset = puntos_plano_terreno[2][2] - (yRedZone22 + 2*r4) + .5
 
-    linesBorder1 = go.Scatter3d(x = [puntosPlanoTerreno[0][0], puntosPlanoTerreno[0][0], puntosPlanoTerreno[2][0], puntosPlanoTerreno[2][0]], 
-                                y = [puntosPlanoTerreno[0][1] + (lado/2), puntosPlanoTerreno[0][1] + (lado/2),  puntosPlanoTerreno[2][1] + (lado/2), puntosPlanoTerreno[2][1] + (lado/2)],
-                                z = [puntosPlanoTerreno[0][2], puntosPlanoTerreno[0][2] - offset, puntosPlanoTerreno[2][2] - offset, puntosPlanoTerreno[2][2] ],
+    linesBorder1 = go.Scatter3d(x = [puntos_plano_terreno[0][0], puntos_plano_terreno[0][0], puntos_plano_terreno[2][0], puntos_plano_terreno[2][0]], 
+                                y = [puntos_plano_terreno[0][1] + (lado/2), puntos_plano_terreno[0][1] + (lado/2),  puntos_plano_terreno[2][1] + (lado/2), puntos_plano_terreno[2][1] + (lado/2)],
+                                z = [puntos_plano_terreno[0][2], puntos_plano_terreno[0][2] - offset, puntos_plano_terreno[2][2] - offset, puntos_plano_terreno[2][2] ],
                                 mode = 'lines',
                                 line = dict(color= 'rgb(70,70,70)', width = 3))
 
-    linesBorder2 = go.Scatter3d(x = [puntosPlanoTerreno[2][0], puntosPlanoTerreno[2][0], puntosPlanoTerreno[2][0]], 
-                                y = [puntosPlanoTerreno[2][1] + (lado/2), puntosPlanoTerreno[2][1] - (lado/2), puntosPlanoTerreno[2][1] - (lado/2)],
-                                z = [ puntosPlanoTerreno[2][2] - offset, puntosPlanoTerreno[2][2] - offset, puntosPlanoTerreno[2][2]],
+    linesBorder2 = go.Scatter3d(x = [puntos_plano_terreno[2][0], puntos_plano_terreno[2][0], puntos_plano_terreno[2][0]], 
+                                y = [puntos_plano_terreno[2][1] + (lado/2), puntos_plano_terreno[2][1] - (lado/2), puntos_plano_terreno[2][1] - (lado/2)],
+                                z = [ puntos_plano_terreno[2][2] - offset, puntos_plano_terreno[2][2] - offset, puntos_plano_terreno[2][2]],
                                 mode = 'lines',
                                 line = dict(color= 'rgb(70,70,70)', width = 3))
 
-    linesBorder3 = go.Scatter3d(x = [ puntosPlanoTerreno[2][0] , puntosPlanoTerreno[0][0], puntosPlanoTerreno[0][0]], 
-                                y = [puntosPlanoTerreno[2][1] - (lado/2), puntosPlanoTerreno[0][1] - (lado/2), puntosPlanoTerreno[0][1] - (lado/2)],
-                                z = [puntosPlanoTerreno[2][2] - offset , puntosPlanoTerreno[0][2] - offset, puntosPlanoTerreno[0][2]],
+    linesBorder3 = go.Scatter3d(x = [ puntos_plano_terreno[2][0] , puntos_plano_terreno[0][0], puntos_plano_terreno[0][0]], 
+                                y = [puntos_plano_terreno[2][1] - (lado/2), puntos_plano_terreno[0][1] - (lado/2), puntos_plano_terreno[0][1] - (lado/2)],
+                                z = [puntos_plano_terreno[2][2] - offset , puntos_plano_terreno[0][2] - offset, puntos_plano_terreno[0][2]],
                                 mode = 'lines',
                                 line = dict(color= 'rgb(70,70,70)', width = 3))
 
-    linesBorder4 = go.Scatter3d(x = [puntosPlanoTerreno[0][0], puntosPlanoTerreno[0][0]], 
-                                y = [ puntosPlanoTerreno[0][1] - (lado/2), puntosPlanoTerreno[0][1] + (lado/2)],
-                                z = [puntosPlanoTerreno[0][2] - offset, puntosPlanoTerreno[0][2] - offset],
+    linesBorder4 = go.Scatter3d(x = [puntos_plano_terreno[0][0], puntos_plano_terreno[0][0]], 
+                                y = [ puntos_plano_terreno[0][1] - (lado/2), puntos_plano_terreno[0][1] + (lado/2)],
+                                z = [puntos_plano_terreno[0][2] - offset, puntos_plano_terreno[0][2] - offset],
                                 mode = 'lines',
                                 line = dict(color= 'rgb(70,70,70)', width = 3))
 
-    xAux = ladosCilindroTramo[0].x + ladosCilindroTramo1[0].x
-    yAux = ladosCilindroTramo[0].y + ladosCilindroTramo1[0].y
-    zAux = ladosCilindroTramo[0].z + ladosCilindroTramo1[0].z
+    xAux = caras_lados_cilindro_colector[0].x + caras_lados_cilindro_colector1[0].x
+    yAux = caras_lados_cilindro_colector[0].y + caras_lados_cilindro_colector1[0].y
+    zAux = caras_lados_cilindro_colector[0].z + caras_lados_cilindro_colector1[0].z
 
     iAux = np.concatenate((np.array(np.linspace(0, (n*2)-2, n)), np.array(np.linspace(1, (n*2)-1, n))))
     jAux = np.concatenate((np.array(np.linspace((n*2), (n*4)-2, n)), np.array(np.linspace((n*2)+1, (n*4)-1, n))))
@@ -479,22 +486,22 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
     frenteColector = go.Mesh3d(x=xAux, y=yAux, z=zAux, i = np.concatenate((iAux1, iAux)), j = np.concatenate((jAux1, jAux)), k = np.concatenate((kAux1, kAux)), color = '#b5b5b5', opacity = 1, flatshading = True, intensitymode = 'cell', hovertemplate='Colector')
 
     #crearCubeMesh3d(puntosPropuestaTuneleraArriba, '#42ff4f', .2, 'zona para perforar segun parametros ingresados', -diametroTunelera)
-    puntos_cota_tunelera = go.Scatter3d(x = [xDisEsquina + diametroTunelera/2, xDisEsquina - diametroTunelera/2], 
+    puntos_cota_tunelera = go.Scatter3d(x = [x_dis_esquina + diametro_tunelera/2, x_dis_esquina - diametro_tunelera/2], 
                                         y = [0, 0], 
-                                        z = [profundidadReltaiva, profundidadReltaiva])
+                                        z = [profundidad_reltaiva, profundidad_reltaiva])
     
     
 
-    fig = go.Figure(data = [ladosCilindroTramo[0], ladosCilindroTramo1[0], ladosCilindroRedZone[0], crearCubeMesh3d(puntosPlanoTerreno, '#808080', 1, 'Superficie', .12),
+    fig = go.Figure(data = [caras_lados_cilindro_colector[0], caras_lados_cilindro_colector1[0], caras_lados_cilindro_redzone[0], crearCubeMesh3d(puntos_plano_terreno, '#808080', 1, 'Superficie', .12),
                             linesBorder1, linesBorder2, linesBorder3, linesBorder4, frenteColector, puntos_cota_tunelera, puntos_recta, cilindro_temporal_interseccion[0], 
-                            delineadoTramoC1, delineadoTramoC2, delineadoTramo1C1, delineadoTramo1C2, delineadoRedZoneC1, delineadoRedZoneC2, borderCilindroTun, borderCilindroTun1, trayectoriaTun, cilindroTunelera[0]], 
+                            border_colector_C1, border_colector_C2, border_colector1_C1, border_colector1_C2, border_redzone_C1, border_redzone_C2, border_cilindro_tun, border_cilindro_tun1, linea_trayectoria_tun, cilindro_tunelera[0]], 
                             frames=frames_anim, 
                             layout = go.Layout(updatemenus=[dict(
                                                 type = "buttons",
                                                 buttons = [dict(label = "Play",
                                                 method = "animate",
                                                 args = [None, dict(frame=dict(duration=10))])])],
-                                                scene_camera = dict(eye=dict(x=-xDisEsquina, y=.5, z=.1), center = dict(x = -xDisEsquina/2, y = 0, z = -.2)))
+                                                scene_camera = dict(eye=dict(x=-x_dis_esquina, y=.5, z=.1), center = dict(x = -x_dis_esquina/2, y = 0, z = -.2)))
                     )
     
 
@@ -505,7 +512,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         showlegend = False,
         scene = dict(annotations = [dict(x = xf, 
                                     y = 0, 
-                                    z = cotaInicial[0][0], 
+                                    z = cota_inicial[0][0], 
                                     text = 'Largo de colector: '+str(round(xf, 2)) + 'm' + '<br>Aguas arriba', 
                                     arrowcolor = "black",
                                     arrowsize = 2,
@@ -514,7 +521,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
                                     xanchor = 'left',
                                     bordercolor = '#969696', bgcolor = '#cccccc', align = 'left'
                                     ),
-                                    dict(x = xDisEsquina, y = -lado/1.5, z = cotaInicial[0][0] - profundidadTunelera, text = 'Camino para tunelera<br>Profundidad: ' + str(profundidadTunelera) + 'm' + '<br>Diametro: ' + str(diametroTunelera) + 'm',
+                                    dict(x = x_dis_esquina, y = -lado/1.5, z = cota_inicial[0][0] - profundidad_tunelera, text = 'Camino para tunelera<br>Profundidad: ' + str(profundidad_tunelera) + 'm' + '<br>Diametro: ' + str(diametro_tunelera) + 'm',
                                          bordercolor = '#969696', bgcolor = '#cccccc', align = 'left' )],
                      aspectmode='data',
                      ),
@@ -527,7 +534,7 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
 
     def crear2D():
         #COTA DE TERRENO
-        terreno = go.Scatter(x = [0, xf], y = [cotaInicial[0][0], cotaFinal[0][0]],  marker = dict(color = 'gray'), mode = 'lines')
+        terreno = go.Scatter(x = [0, xf], y = [cota_inicial[0][0], cota_final[0][0]],  marker = dict(color = 'gray'), mode = 'lines')
         
         # DIBUJA TRAMO
         tramoArriba = go.Scatter(x = [0, xf], y = [zarriba+diam+espesorArriba, zabajo+diam+espesorArriba], legendgroup = 'tramo',  marker = dict(color = colorColectorHex), mode = 'lines')
@@ -539,8 +546,8 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         limRedZoneArriba = go.Scatter(x = [0, xf], y = [yRedZone12, yRedZone22], legendgroup = 'redZone', marker = dict(color = '#ff4255'), mode = 'lines')
 
         #PROPUESTA TUNELERA
-        propTunArriba = go.Scatter(x = [0, xf], y = [cotaInicial[0][0] - (profundidadTunelera + 0.5*diametroTunelera), cotaFinal[0][0] - (profundidadTunelera + 0.5*diametroTunelera)], legendgroup = 'propTun',  marker = dict(color = 'green'), line = dict(dash = 'dash'), mode = 'lines') 
-        propTunAbajo = go.Scatter(x = [0, xf], y = [cotaInicial[0][0] - (profundidadTunelera - 0.5*diametroTunelera), cotaFinal[0][0] - (profundidadTunelera - 0.5*diametroTunelera)], legendgroup = 'propTun',  marker = dict(color = 'green'), line = dict(dash = 'dash'), mode = 'lines')
+        propTunArriba = go.Scatter(x = [0, xf], y = [cota_inicial[0][0] - (profundidad_tunelera + 0.5*diametro_tunelera), cota_final[0][0] - (profundidad_tunelera + 0.5*diametro_tunelera)], legendgroup = 'propTun',  marker = dict(color = 'green'), line = dict(dash = 'dash'), mode = 'lines') 
+        propTunAbajo = go.Scatter(x = [0, xf], y = [cota_inicial[0][0] - (profundidad_tunelera - 0.5*diametro_tunelera), cota_final[0][0] - (profundidad_tunelera - 0.5*diametro_tunelera)], legendgroup = 'propTun',  marker = dict(color = 'green'), line = dict(dash = 'dash'), mode = 'lines')
         
         #FILL
         x = [0, xf, xf, 0]
@@ -552,15 +559,15 @@ def updateGraph(idTramo, diametroTunelera, profundidadTunelera, disEsquina, idEs
         y = [yRedZone12, yRedZone22, zabajo + diam + espesorArriba, zarriba + diam + espesorArriba]
         fillRedZoneAbajo = go.Scatter(x = x, y = y, mode = 'none', legendgroup = 'redZone', fill = 'toself', fillcolor = 'rgba(255, 66, 85, .5)', showlegend = False)
         
-        coordsCenterTuneleras = [xDisEsquina, 0,  cotaInicial[0][0] - (profundidadTunelera)]
-        puntosAux = go.Scatter(x = [coordsCenterTuneleras[0]-diametroTunelera/2, coordsCenterTuneleras[0]+diametroTunelera/2], y = [coordsCenterTuneleras[2]-diametroTunelera/2, coordsCenterTuneleras[2]+diametroTunelera/2])
+        coordsCenterTuneleras = [x_dis_esquina, 0,  cota_inicial[0][0] - profundidad_tunelera]
+        puntosAux = go.Scatter(x = [coordsCenterTuneleras[0]-diametro_tunelera/2, coordsCenterTuneleras[0]+diametro_tunelera/2], y = [coordsCenterTuneleras[2]-diametro_tunelera/2, coordsCenterTuneleras[2]+diametro_tunelera/2])
 
         fig = go.Figure(data=([terreno, tramoArriba, tramoAbajo, limRedZoneAbajo, limRedZoneArriba, propTunArriba, propTunAbajo, fillTramoArea, fillRedZoneArriba, fillRedZoneAbajo]))
         
         #Dibuja un circulo inscripto en el cuadrado con el vertice inferior izquiero en coords(x0, y0) y el vertice superior derecho (x1, y1)
         fig.add_shape(type="circle",
             xref="x", yref="y",
-            x0 = coordsCenterTuneleras[0]-diametroTunelera/2, y0 = coordsCenterTuneleras[2]-diametroTunelera/2, x1 = coordsCenterTuneleras[0]+diametroTunelera/2, y1 = coordsCenterTuneleras[2]+diametroTunelera/2,
+            x0 = coordsCenterTuneleras[0]-diametro_tunelera/2, y0 = coordsCenterTuneleras[2]-diametro_tunelera/2, x1 = coordsCenterTuneleras[0]+diametro_tunelera/2, y1 = coordsCenterTuneleras[2]+diametro_tunelera/2,
             line_color="black",
         )
         fig.update_layout(scene_xaxis_visible = False, scene_yaxis_visible = False, scene = dict(aspectmode = 'data'))
@@ -596,8 +603,8 @@ app.layout = html.Div([
    
     
     html.Div([
-              dcc.Graph(figure = updateGraph(1, 0, 0, disEsquina = 0, idEsquina = 1)[0], id = 'graph3D'),
-              dcc.Graph(figure = updateGraph(1, 0, 0, disEsquina = 0, idEsquina = 1)[1], id = 'graph2D')
+              dcc.Graph(figure = updateGraph(1, 0, 0, dis_esquina = 0, id_esquina = 1)[0], id = 'graph3D'),
+              dcc.Graph(figure = updateGraph(1, 0, 0, dis_esquina = 0, id_esquina = 1)[1], id = 'graph2D')
              ],
              id = 'Graficos')
 ], id = 'MainLabel')
