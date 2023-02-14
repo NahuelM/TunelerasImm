@@ -1,0 +1,24 @@
+QTDesigner can be found in the Start Menu and is installed by QGIS
+
+Install PB-TOOL:
+py -m pip install pb-tool
+
+Use this to upgrade PIP if you need to (I did!): py -m pip install --upgrade pip 
+
+To compile your resources, you also need:
+py -m pip install pyqt5ac
+
+Make sure your PATH is set to be able to see your Python .exes and also scripts. Just type PY or PBT at command line to see if it all hangs together***
+
+Use pbt compile in your plugin folder and then use Manage Plugins in QGIS to add your plugin.
+
+All the info on the PB-TOOL can be discovered here:
+http://g-sherman.github.io/plugin_bui...
+
+And all about PyQt5 can be found here:
+https://pypi.org/project/pyqt5ac/
+
+
+COMPILE CODE
+
+pbt compile

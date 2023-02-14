@@ -10,6 +10,7 @@ import math
 import numpy as np
 from flask import send_from_directory
 import pandas as pd
+import webbrowser
 
 external_stylesheets = [
     {
@@ -19,13 +20,10 @@ external_stylesheets = [
 ]
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, {
-        'href': 'static/styles.css',
+        'href': '../static/styles.css',
         'rel': 'stylesheet'
 }, dbc.icons.BOOTSTRAP], title='Tuneleras')
-
-
-
-
+server = app.server
 
 def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina):
     app.server.my_variable = 'Initial value'
@@ -343,14 +341,14 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina)
     caras_lados_cilindro_colector1 = crear_cilindro_mesh3d(x1, y1, z1, x2, y2, z2, r1 - .1, r2 - .1, 'rgba(181, 181, 181, 1)', 1, 'Colector', 'y', math.pi / 2, name = 'ladoTramo2', trunco = False)
     caras_lados_cilindro_redzone = crear_cilindro_mesh3d(x3, y3, z3, x4, y4, z4, r3, r4, 'rgba(255, 66, 85, 1)', .25, 'Zona no permitida para perforaciones', 'y', math.pi / 2, name = 'ladoRD', trunco = True)
     
-    border_colector_C1 = go.Scatter3d(x = caras_lados_cilindro_colector[1][0], y = caras_lados_cilindro_colector[1][1], z = caras_lados_cilindro_colector[1][2], mode = 'lines', marker = dict(color = 'gray'))
-    border_colector_C2 = go.Scatter3d(x = caras_lados_cilindro_colector[2][0], y = caras_lados_cilindro_colector[2][1], z = caras_lados_cilindro_colector[2][2], mode = 'lines', marker = dict(color = 'gray'))
+    border_colector_C1 = go.Scatter3d(x = caras_lados_cilindro_colector[1][0], y = caras_lados_cilindro_colector[1][1], z = caras_lados_cilindro_colector[1][2], mode = 'lines', marker = dict(color = 'gray'), hovertemplate='-')
+    border_colector_C2 = go.Scatter3d(x = caras_lados_cilindro_colector[2][0], y = caras_lados_cilindro_colector[2][1], z = caras_lados_cilindro_colector[2][2], mode = 'lines', marker = dict(color = 'gray'), hovertemplate='-')
     
-    border_colector1_C1 = go.Scatter3d(x = caras_lados_cilindro_colector1[1][0], y = caras_lados_cilindro_colector1[1][1], z = caras_lados_cilindro_colector1[1][2], mode = 'lines', marker = dict(color = 'gray'))
-    border_colector1_C2 = go.Scatter3d(x = caras_lados_cilindro_colector1[2][0], y = caras_lados_cilindro_colector1[2][1], z = caras_lados_cilindro_colector1[2][2], mode = 'lines', marker = dict(color = 'gray'))
+    border_colector1_C1 = go.Scatter3d(x = caras_lados_cilindro_colector1[1][0], y = caras_lados_cilindro_colector1[1][1], z = caras_lados_cilindro_colector1[1][2], mode = 'lines', marker = dict(color = 'gray'), hovertemplate='-')
+    border_colector1_C2 = go.Scatter3d(x = caras_lados_cilindro_colector1[2][0], y = caras_lados_cilindro_colector1[2][1], z = caras_lados_cilindro_colector1[2][2], mode = 'lines', marker = dict(color = 'gray'), hovertemplate='-')
     
-    border_redzone_C1 = go.Scatter3d(x = caras_lados_cilindro_redzone[1][0], y = caras_lados_cilindro_redzone[1][1], z = caras_lados_cilindro_redzone[1][2], mode = 'lines', marker = dict(color = 'rgba(181, 0, 24, 1)'))
-    border_redzone_C2 = go.Scatter3d(x = caras_lados_cilindro_redzone[2][0], y = caras_lados_cilindro_redzone[2][1], z = caras_lados_cilindro_redzone[2][2], mode = 'lines', marker = dict(color = 'rgba(181, 0, 24, 1)'))
+    border_redzone_C1 = go.Scatter3d(x = caras_lados_cilindro_redzone[1][0], y = caras_lados_cilindro_redzone[1][1], z = caras_lados_cilindro_redzone[1][2], mode = 'lines', marker = dict(color = 'rgba(181, 0, 24, 1)'), hovertemplate='-')
+    border_redzone_C2 = go.Scatter3d(x = caras_lados_cilindro_redzone[2][0], y = caras_lados_cilindro_redzone[2][1], z = caras_lados_cilindro_redzone[2][2], mode = 'lines', marker = dict(color = 'rgba(181, 0, 24, 1)'), hovertemplate='-')
     #propuesta tunelera más abajo
     # puntosPropuestaTuneleraAbajo = [(0, 0, cota_inicial[0][0]-(profundidad_tunelera+0.5*diametro_tunelera)), 
     #                                 (datos[0][6] / 2, 15, ((cota_inicial[0][0]-(profundidad_tunelera+0.5*diametro_tunelera) + cota_final[0][0]-(profundidad_tunelera+0.5*diametro_tunelera))/2)), 
@@ -821,7 +819,8 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina)
             )  
         #endregion
         fig.update_layout(scene_xaxis_visible = False, scene_yaxis_visible = False, title = dict(text='Perfil longitudinal', y = .9, x = .5, xanchor='center', yanchor = 'top'), showlegend = False, scene = dict(aspectmode='cube'),  xaxis_title="",
-                            yaxis_title="Cota",)
+                            yaxis_title="Cota", autosize = True)
+        fig['layout']['yaxis'].update(autorange = True)
         return fig
 
     datos_to_tabla = [[cota_inicial[0][0], zarriba, datos[0][2], 1, coords_puntos_tapas[0], coords_puntos_tapas[1], cota_inicial[0][1]],
@@ -1009,6 +1008,7 @@ def update_figure(selected_ID, diametro_tunelera, profundidad_tunelera, dis_esqu
             )
         ]
     )
+
     
     return fig[0], fig[1], tabla_res, None
 
