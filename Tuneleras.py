@@ -256,7 +256,7 @@ def make_map(tramos_csv, id, dis_esq):
 
     angle = (math.atan(pendiente))
     hipotenusa_dis = float(dis_esq)
-    dis_cateto_adj = math.cos(angle) * hipotenusa_dis
+    dis_cateto_adj = round(math.cos(angle) * hipotenusa_dis, 2)
     a = math.pow(x2 - (x2+dis_cateto_adj), 2)
     b = math.pow(recta_tramo(x2) - recta_tramo(x2+dis_cateto_adj), 2)
     
@@ -284,7 +284,19 @@ def make_map(tramos_csv, id, dis_esq):
                         
     )
     
-    fig = go.Figure(data = [map_tramo, map_tunelera])
+    map_dis = go.Scattermapbox(
+        lat = [lat_pt_tramo1, (lat_pt_tramo1 + float(lat_array[1]))/2, lat_array[1]],
+        lon = [lon_pt_tramo1, (lon_pt_tramo1 + float(lon_array[1]))/2, lon_array[1]],
+        mode = 'lines+text',
+        marker = go.scattermapbox.Marker(
+            size = 3,
+            color = 'rgba(20,20,20,1)'
+            
+        ),
+        text = ['', 'dis: ' + str(round(math.sqrt(a + b), 1)) + 'm', '']
+    )
+    
+    fig = go.Figure(data = [map_tramo, map_tunelera, map_dis])
     fig.update_layout(
         mapbox = dict(
             accesstoken='pk.eyJ1IjoibmFodWVsMDAwIiwiYSI6ImNsZW11MGQ2YjAweXUzcnIxaHp4MTF2NGgifQ.aLPRn5aR6GNJ3QDIKbhFeg',
