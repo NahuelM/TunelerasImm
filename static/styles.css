@@ -65,3 +65,17 @@ body {
     cursor: pointer;
     border-radius: .5rem;
 }
+.Loading{
+    background-color: #04AA6D;
+    color: #04AA6D;
+}
+/*Para personalizar spinner loading*/
+/* .dash-spinner {
+    background-image: url("https://i.stack.imgur.com/SBv4T.gif");
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+  
+.dash-spinner * {
+    display: none !important;
+} */

@@ -1404,18 +1404,26 @@ graph_card = dbc.Card(
         dbc.CardBody(
             [
                 html.H4("GRAFICAS", className="card-title", style={"text-align": "center"}),
+                dcc.Loading(
+                    id = "loading-1",
+                    type = "graph",
+                    children = html.Div(id="loading-output-1"),
+                    fullscreen = True,
+                    className = 'Loading',
+                    debug = False
+                ),
                 html.Div([
-                dcc.Graph(figure = init_graph[0], id = 'graph3D'),
-                dcc.Graph(figure = init_graph[1], id = 'graph2D'),
-                dcc.Graph(figure = make_map_2(csv_data_tramos, 1, 0, 0), id = '_map'),
-                dbc.CardBody(
-                    [
-                        html.H6('DATOS unidades: utm 84-21s Wharton'),
-                        html.Div(id = 'tabla', children=[])
-                       
-                    ], id = 'Tabla')
-                ], id = 'Graficos'),
-
+                    dcc.Graph(figure = init_graph[0], id = 'graph3D'),
+                    dcc.Graph(figure = init_graph[1], id = 'graph2D'),
+                    dcc.Graph(figure = make_map_2(csv_data_tramos, 1, 0, 0), id = '_map'),
+                    dbc.CardBody(
+                        [
+                            html.H6('DATOS unidades: utm 84-21s Wharton'),
+                            html.Div(id = 'tabla', children=[])
+                        
+                        ], id = 'Tabla')
+                    ], id = 'Graficos'),
+                
             ]
         ),
     ],
@@ -1451,7 +1459,9 @@ app.layout = html.Div([
 # ************************************************************************************************************************************************
 
 @app.callback(
-    [Output('graph3D', 'figure'),
+    [
+    Output('loading-output-1', 'children'),
+    Output('graph3D', 'figure'),
     Output('graph2D', 'figure'),
     Output('tabla', 'children'),
     Output('_map', 'figure'),
@@ -1517,7 +1527,7 @@ def update_figure(selected_ID, diametro_tunelera, profundidad_tunelera, dis_esqu
     )
 
     
-    return fig[0], fig[1], tabla_res, _map, None
+    return None, fig[0], fig[1], tabla_res, _map, None
 
 
 @app.callback(
