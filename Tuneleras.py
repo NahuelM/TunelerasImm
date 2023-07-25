@@ -27,7 +27,6 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, {
 }, dbc.icons.BOOTSTRAP], title='Tuneleras')
 server = app.server
 
-
 csv_data_tramos = pd.read_csv('Datos.csv', delimiter = ',')
 
 
@@ -195,6 +194,7 @@ def crear_cilindro_mesh3d(Xcoord_C1, Ycoord_C1, ZCoord_C1, Xcoord_C2, Ycoord_C2,
                 [x_rc1, y_rc1, z_rc1],
                 [x_rc2, y_rc2, z_rc2]]
 
+
 def make_map_2(tramos_csv, id, dis_esq, ang_tun):
     datos_CSV = tramos_csv.iloc[int(id)][0:16]
     datos = [datos_CSV]
@@ -301,13 +301,25 @@ def make_map_2(tramos_csv, id, dis_esq, ang_tun):
     m2 = (-1/(pendiente))
     m_ajustada = math.tan(math.atan(m2) + math.radians(-float(ang_tun)))
     m2 = m_ajustada
-    # angulo_rectas = math.atan((m2 - m1) / (1 + (m2 * m1)))
-    #print("Angulo entre rectas: " + str(m2) + " " + str(m1) + "  " + str(m2*m1))
-
+    angulo_rectas = 0
+    if(m2*m1 != -1):
+        angulo_rectas = math.atan((m2 - m1) / (1 + (m2 * m1)))
+    else:
+        angulo_rectas = math.pi/2
+        
     
     lat_pt_tramo1, lon_pt_tramo1 = transformer.transform(x2 + dis_cateto_adj, recta_tramo(x2 + dis_cateto_adj))
     lat_pt_tramo2, lon_pt_tramo2 = transformer.transform(x2 + dis_cateto_adj - 4, recta_tun(x2 + dis_cateto_adj - 4))
     lat_pt_tramo3, lon_pt_tramo3 = transformer.transform(x2 + dis_cateto_adj + 4, recta_tun(x2 + dis_cateto_adj + 4))
+    
+    lat_pt_angle, lon_pt_angle = transformer.transform(x2 + dis_cateto_adj + 3, recta_tramo(x2 + dis_cateto_adj))
+    
+    map_angle = go.Scattermapbox(
+        lat = [lat_pt_angle],
+        lon = [lon_pt_angle],
+        mode = 'text',
+        text = 'ángulo: ' + str(math.degrees(angulo_rectas))
+    )
     
     map_tunelera = go.Scattermapbox(
         lat = [lat_pt_tramo1, lat_pt_tramo2, lat_pt_tramo3],
@@ -347,15 +359,16 @@ def make_map_2(tramos_csv, id, dis_esq, ang_tun):
             
         ),
         #text = ['', 'dis: ' + str(round(math.sqrt(a + b), 1)) + 'm', '']
-        text = ['', 'dis: ' + str(dis_esq) + 'm', ''],
+        text = ['', 'dis: '+ str(dis_esq) + 'm', ''],
         showlegend = False
     )
     
     
     
     
-    array_maps.append(map_tunelera)
-    array_maps.append(map_dis)
+    # array_maps.append(map_tunelera)
+    # array_maps.append(map_dis)
+    array_maps.extend([map_angle, map_tunelera, map_dis])
     fig = go.Figure(data = array_maps)
     fig.update_layout(
         mapbox = dict(
@@ -379,8 +392,6 @@ def calcular_distancia_al_origen(punto):
 def ordenar_puntos_por_distancia_al_origen(puntos):
     puntos_ordenados = sorted(puntos, key=calcular_distancia_al_origen)
     return puntos_ordenados
-
-
 
 def distancia_punto_a_recta(A, B, C, P):
     #formula de distancioa de punto a recta
@@ -518,7 +529,7 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
     #A B C son los valores de la recta escrita de forma implicita Ax +By +C = 0, despejo de forma parametrica m(x - x1) = y - y1 (m es la pendiente de la recta)
     A = pendiente_tramo_en_plano_XY
     B = -1
-    C = y1-pendiente_tramo_en_plano_XY*x1
+    C = y1 - pendiente_tramo_en_plano_XY * x1
     distancias_de_puntos_a_recta_ejeY = []
     distancias_de_punto_inicial_a_intermedios = []
     distancias_de_puntos_a_recta_ejeX = []
@@ -859,15 +870,40 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
     # Obtiene las coordenadas de la cámara
 
     lado_cam_movment = 1 if x_dis_esquina > xf/2 else -1
-    l = 2 if xf < 20 else 20
-    #factor_mov_cam = (xf/30)+l
-    factor_mov_cam = abs((xf/l) - x_dis_esquina) 
-            
-    X_cam_path = np.linspace(0, factor_mov_cam*lado_cam_movment, cant_frames)
-    Y_cam_path = np.linspace(3, 0.5, cant_frames)
-    Z_cam_path = 0.1
+    # l = 2 if xf < 20 else 20
+    # factor_mov_cam = (xf/l) + l
+    # #factor_mov_cam = abs((xf/l) - x_dis_esquina) 
+    
+    # eye = [1, 3, .1]
+    # center = [0, 1, 0]
+    # up = [0, 0, 1]
+    # # M = np.column_stack([eye, center, up])
+    # # M_inv = np.linalg.inv(M)
+    # # vector_v_cam = M_inv.dot([xf/2, .5, 0])
+    # M = [[1, -3, -.1],
+    #      [0, 1, 0],
+    #      [0, 0, 1]]
+    
+    # M_inv = np.linalg.inv(M)
+    # print(str(M_inv))
+    # vector_v_cam = M_inv @ [xf/2, .5, 0]
+    # print(str(vector_v_cam[0]) + " " + str(xf/2))
+    
+    # X_cam_path = np.linspace(1, (xf/20)*lado_cam_movment, cant_frames)
+    # Y_cam_path = np.linspace(3, 0.5, cant_frames)
+    
+    X_cam_path = np.linspace(1, 3.7*lado_cam_movment, cant_frames)
+    Y_cam_path = np.linspace(3, 0.05, cant_frames)
+    Z_cam_path = 0.01
+
     for t in range(cant_frames):
-        frame_cam = dict(layout=dict(scene=dict(camera=dict(eye=dict(x=X_cam_path[t], y=Y_cam_path[t], z=Z_cam_path), center = dict(x = 0, y = 0, z = 0)))))
+        frame_cam = dict(layout = dict(
+            scene = dict(camera = dict(
+                eye = dict(
+                    x = X_cam_path[t], 
+                    y = Y_cam_path[t], 
+                    z = Z_cam_path), 
+                center = dict(x = 0, y = 0, z = 0)))))
         frames_anim.append(frame_cam)
     
 
@@ -877,7 +913,8 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
     ######################################## 
     ## Cilidro que representa la tunelera ## 
     ######################################## 
-    dis_cat_op = math.sin(math.radians(float(ang_tun)))*h
+    dis_cat_op = math.sin(math.radians(-float(ang_tun)))*h
+    
     cilindro_Frame = crear_cilindro_mesh3d(x_dis_esquina + dis_cat_op, -profundidad_reltaiva, lado/1.5, x_dis_esquina - dis_cat_op, -profundidad_reltaiva, h, diametro_tunelera/2, diametro_tunelera/2, 'rgba(204, 204, 204, .8)', 1, 'Tunelera', 'x', math.pi / 2, name='propTun', trunco = False, cota_final = cota_final, cota_inicial = cota_inicial, n = n)
     
     dis_cat_op_array_interpolation = np.linspace(-dis_cat_op, dis_cat_op, cant_frames+1)
@@ -1004,7 +1041,7 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
                                              z = [profundidad_reltaiva, profundidad_reltaiva], 
                                              mode='lines+markers',  
                                              marker = dict(color = 'black', size = 5), 
-                                             line=dict(dash = 'longdashdot'))
+                                             line = dict(dash = 'longdashdot'))
         fig.add_trace(cilindro_tunelera[0])
         fig.add_trace(border_cilindro_tun)
         fig.add_trace(border_cilindro_tun1)
@@ -1138,7 +1175,7 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
             x_line_circle = ((coords_center_tuneleras[0] - diametro_tunelera/2 + dis_cat_op) + (coords_center_tuneleras[0] + diametro_tunelera/2 + dis_cat_op)) / 2
             y_line_circle = coords_center_tuneleras[1] - diametro_tunelera/2
             
-            if(float(ang_tun) > 0):
+            if(float(ang_tun) != 0):
                 fig.add_shape(type = "circle",
                     xref = "x",
                     yref = "y",
@@ -1414,6 +1451,7 @@ graph_card = dbc.Card(
                 ),
                 html.Div([
                     dcc.Graph(figure = init_graph[0], id = 'graph3D'),
+                    # html.Div(id='current-camera-coordinates'),
                     dcc.Graph(figure = init_graph[1], id = 'graph2D'),
                     dcc.Graph(figure = make_map_2(csv_data_tramos, 1, 0, 0), id = '_map'),
                     dbc.CardBody(
@@ -1529,6 +1567,21 @@ def update_figure(selected_ID, diametro_tunelera, profundidad_tunelera, dis_esqu
     
     return None, fig[0], fig[1], tabla_res, _map, None
 
+# @app.callback(
+#     Output('current-camera-coordinates', 'children'),
+#     Input('graph3D', 'relayoutData')
+# )
+# def display_camera_coordinates(relayout_data):
+#     if 'scene.camera' in relayout_data:
+#         camera = relayout_data['scene.camera']
+#         eye = [camera['eye'][dim] for dim in ['x', 'y', 'z']]
+#         center = [camera['center'][dim] for dim in ['x', 'y', 'z']]
+#         up = [camera['up'][dim] for dim in ['x', 'y', 'z']]
+        
+#         basis = f"Vector eye (cámara): {eye}\nVector center (objetivo): {center}\nVector up (arriba): {up}"
+#         return f"Base del espacio vectorial de la cámara:\n{basis}"
+#     else:
+#         return "No se han proporcionado coordenadas de la cámara aún."
 
 @app.callback(
     Output("modal", "is_open"),
