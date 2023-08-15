@@ -257,6 +257,7 @@ def make_map_2(tramos_csv, id, dis_esq, ang_tun):
         name = "Tramo"
     )
     
+    
     array_maps.append(map_tramo)
     aux = seleccionar_sub_tramo_list(dis_esq, array_puntos)
     
@@ -362,13 +363,26 @@ def make_map_2(tramos_csv, id, dis_esq, ang_tun):
         text = ['', 'dis: '+ str(dis_esq) + 'm', ''],
         showlegend = False
     )
+    arrayY1 = [6137904.6067967415, 6137915.796495838, 6137897.713503941, 6137889.6603871705, 6137899.8251867825, 6137904.6067967415]
+    arrayX1 = [574293.4761516108, 574311.2814135767, 574318.4690509709, 574296.0477087214, 574292.2871031114, 574293.4761516108]
     
+    arrayY2 = [6137915.796495833, 6137921.316935031, 6137900.501804421, 6137897.713503937, 6137915.796495833]
+    arrayX2 = [574311.2814135746, 574320.0655197642, 574326.2324154476, 574318.4690509748, 574311.2814135746]
+    lonShape, latShape = transformer.transform(arrayX1, arrayY1)
     
-    
-    
+    lonShape2, latShape2 = transformer.transform(arrayX2, arrayY2)
     # array_maps.append(map_tunelera)
     # array_maps.append(map_dis)
-    array_maps.extend([map_angle, map_tunelera, map_dis])
+    auxX = np.concatenate((latShape, [None], latShape2))
+    auxY = np.concatenate((lonShape, [None], lonShape2))
+    shape = go.Scattermapbox(
+        fill = "toself",
+        mode = "lines",
+        lon = auxX, lat = auxY,
+        marker = { 'size': 10, 'color': "orange" })
+    
+    
+    array_maps.extend([map_angle, map_tunelera, map_dis, shape])
     fig = go.Figure(data = array_maps)
     fig.update_layout(
         mapbox = dict(
@@ -1487,14 +1501,21 @@ modal = html.Div(
     ]
 )
 
-
+mapJs = html.Iframe(id = 'map-iframe',srcDoc=open('./mapa.html', 'r').read(), width='100%', height='500px')
 
 
 # ************************************************************************************************************************************************
 app.layout = html.Div([
-    dbc.Row([dbc.Col(image_card, width = 2), dbc.Col(graph_card, width = 10), modal], justify = "around")
+    dbc.Row([dbc.Col(image_card, width = 2), dbc.Col(graph_card, width = 10), mapJs, modal], justify = "around")
 ], id = 'MainLabel', )
 # ************************************************************************************************************************************************
+
+
+def invocarFunJs():
+    script = f"document.getElementById('map-iframe').contentWindow.invocarDesdePython('{'perro'}')"
+    return script
+
+
 
 @app.callback(
     [
@@ -1566,6 +1587,9 @@ def update_figure(selected_ID, diametro_tunelera, profundidad_tunelera, dis_esqu
 
     
     return None, fig[0], fig[1], tabla_res, _map, None
+
+
+
 
 # @app.callback(
 #     Output('current-camera-coordinates', 'children'),
