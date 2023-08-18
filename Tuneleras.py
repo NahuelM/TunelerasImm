@@ -12,7 +12,8 @@ import math
 import numpy as np
 from flask import send_from_directory
 import pandas as pd
-
+import re 
+from shapely.geometry import MultiPolygon, Point, Polygon
 
 external_stylesheets = [
     {
@@ -28,7 +29,7 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, {
 server = app.server
 
 csv_data_tramos = pd.read_csv('Datos.csv', delimiter = ',')
-
+csv_data_padrones = pd.read_csv('Padrones.csv', delimiter = ',')
 
 def rotate_xMatriz(angle):
         """" Devuelve la matriz de rotacion que rota `angle` en el eje `x` """
@@ -193,6 +194,20 @@ def crear_cilindro_mesh3d(Xcoord_C1, Ycoord_C1, ZCoord_C1, Xcoord_C2, Ycoord_C2,
                           name = name),
                 [x_rc1, y_rc1, z_rc1],
                 [x_rc2, y_rc2, z_rc2]]
+
+def calc_dis_plygon_point(coord_plygon:str, point:Point) -> float:
+    match = re.match(r"MULTIPOLYGON\(\(\((.*)\)\)\)", coord_plygon)
+    if match:
+        coordinates = match.group(1)
+        # Convertir las coordenadas en una lista de listas
+        coords_list = [list(map(float, coord.split())) for coord in coordinates.split(',')]
+        # Crear un objeto Polygon
+        polygon = Polygon(coords_list)
+        d = polygon.distance(point)
+        return d
+    else:
+        print("No se pudieron extraer las coordenadas del MultiPolygon")
+        return 0
 
 
 def make_map_2(tramos_csv, id, dis_esq, ang_tun):

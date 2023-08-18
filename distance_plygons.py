@@ -2,10 +2,6 @@ from shapely.geometry import MultiPolygon, Point, Polygon
 import re
 # Definir las coordenadas de un MultiPolygon
 
-multi_polygon = MultiPolygon([(((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)), [((0.1, 0.1), (0.1, 0.2), (0.2,0.2), (0.2,0.1))])])
-
-
-
 # Definir un Point
 point = Point(574291.185, 6137887.813)
 
@@ -21,7 +17,6 @@ if match:
     # Convertir las coordenadas en una lista de listas
     coords_list = [list(map(float, coord.split())) for coord in coordinates.split(',')]
     # Crear un objeto Polygon
-    print(coords_list)
     polygon = Polygon(coords_list)
     d = polygon.distance(point)
     print("Distancia:", d)
