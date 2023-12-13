@@ -14,6 +14,8 @@ from flask import send_from_directory
 import pandas as pd
 import re 
 from shapely.geometry import MultiPolygon, Point, Polygon
+import os
+from icecream import ic
 
 external_stylesheets = [
     {
@@ -30,6 +32,7 @@ server = app.server
 
 csv_data_tramos = pd.read_csv('Datos.csv', delimiter = ',')
 csv_data_padrones = pd.read_csv('Padrones.csv', delimiter = ',')
+csv_data_padrones_cercanos = pd.read_csv('padronesCercanos Data.csv', delimiter = ',')
 
 def rotate_xMatriz(angle):
         """" Devuelve la matriz de rotacion que rota `angle` en el eje `x` """
@@ -92,7 +95,7 @@ def crear_cilindro_mesh3d(Xcoord_C1, Ycoord_C1, ZCoord_C1, Xcoord_C2, Ycoord_C2,
                         `eje:` eje de rotacion 
                         `angle:` angulo en radianes para rotar
                         `name:` nombre del cilidro
-                        `trunco:` bool-> si es verdadero truncara las coordenasdas en z de los vertices que esten por encima de la cota de terreno(les resta la distancia para que se siga dibujando bien)
+                        `trunco:` bool-> si es verdadero truncara las coordenasdas en z de los vertices que esten por encima de la cota de terreno(les resta la distancia para que se  dibuje bien)
                         
             IMPORTANTE:  Observar que la diferencia entre las coordenadas en Z de ambas circunferencias determina el largo del cilindro 
                          Al rotar el cilindro en algun eje tambien rotan sus ejes locales, por lo que algunas coordenas cambian (ejemplo, al rotarse en ele eje y, las coordenas x, z se intercambain)
@@ -195,7 +198,8 @@ def crear_cilindro_mesh3d(Xcoord_C1, Ycoord_C1, ZCoord_C1, Xcoord_C2, Ycoord_C2,
                 [x_rc1, y_rc1, z_rc1],
                 [x_rc2, y_rc2, z_rc2]]
 
-def calc_dis_plygon_point(coord_plygon:str, point:Point) -> float:
+
+def calc_dis_plygon_point(coord_plygon:str, point:Point) -> list:
     match = re.match(r"MULTIPOLYGON\(\(\((.*)\)\)\)", coord_plygon)
     if match:
         coordinates = match.group(1)
@@ -203,11 +207,22 @@ def calc_dis_plygon_point(coord_plygon:str, point:Point) -> float:
         coords_list = [list(map(float, coord.split())) for coord in coordinates.split(',')]
         # Crear un objeto Polygon
         polygon = Polygon(coords_list)
-        d = polygon.distance(point)
-        return d
+        
+         # Calcular la distancia mínima entre el punto y los vértices del polígono
+        distances = [point.distance(Point(coord)) for coord in coords_list]
+        min_distance_index = np.argmin(distances)
+        closest_vertex_coords = coords_list[min_distance_index]
+
+        d = distances[min_distance_index]
+        d2 =  polygon.distance(point)
+        # print("Distancia:", d)
+        # print("Distancia2: ", d2)
+        # print('----------------------------------------')
+        # print("Coordenadas del punto más cercano dentro del polígono:", closest_vertex_coords)
+        return [d, coords_list, closest_vertex_coords]
     else:
         print("No se pudieron extraer las coordenadas del MultiPolygon")
-        return 0
+        return [0, None, None]
 
 
 def make_map_2(tramos_csv, id, dis_esq, ang_tun):
@@ -323,6 +338,8 @@ def make_map_2(tramos_csv, id, dis_esq, ang_tun):
     else:
         angulo_rectas = math.pi/2
         
+
+    
     
     lat_pt_tramo1, lon_pt_tramo1 = transformer.transform(x2 + dis_cateto_adj, recta_tramo(x2 + dis_cateto_adj))
     lat_pt_tramo2, lon_pt_tramo2 = transformer.transform(x2 + dis_cateto_adj - 4, recta_tun(x2 + dis_cateto_adj - 4))
@@ -378,30 +395,55 @@ def make_map_2(tramos_csv, id, dis_esq, ang_tun):
         text = ['', 'dis: '+ str(dis_esq) + 'm', ''],
         showlegend = False
     )
-    arrayY1 = [6137904.6067967415, 6137915.796495838, 6137897.713503941, 6137889.6603871705, 6137899.8251867825, 6137904.6067967415]
-    arrayX1 = [574293.4761516108, 574311.2814135767, 574318.4690509709, 574296.0477087214, 574292.2871031114, 574293.4761516108]
     
-    arrayY2 = [6137915.796495833, 6137921.316935031, 6137900.501804421, 6137897.713503937, 6137915.796495833]
-    arrayX2 = [574311.2814135746, 574320.0655197642, 574326.2324154476, 574318.4690509748, 574311.2814135746]
-    lonShape, latShape = transformer.transform(arrayX1, arrayY1)
+    shapes_padrones = []
+    padrones_cercanos = csv_data_padrones_cercanos.iloc[int(id)-1][1].strip('[]').split(', ')
+    ic(padrones_cercanos)
+    padrones_lat = []
+    padrones_lon = []
+    closest_points = []
+    # closest_point_lat = []
+    # closest_point_lon = []
     
-    lonShape2, latShape2 = transformer.transform(arrayX2, arrayY2)
+    for i in range(1, len(padrones_cercanos)):
+        str_plygon = csv_data_padrones.iloc[int(padrones_cercanos[i])-2][2]
+        point_tun = Point(x2 + dis_cateto_adj, recta_tramo(x2 + dis_cateto_adj))
+        aux = calc_dis_plygon_point(str_plygon, point_tun)
+        closest_point_lat, closest_point_lon = transformer.transform(float(aux[2][0]), float(aux[2][1]))
+        closest_points.append(go.Scattermapbox(lon = [closest_point_lon], lat = [closest_point_lat]))
+        for j in range(0, len(aux[1])):
+            arr_coords_aux = str(aux[1][j]).strip('[]').split(',')
+            # padrones_coord_x.append(float(arr_coords_aux[0]))
+            # padrones_coord_y.append(float(arr_coords_aux[1]))
+            latShape, lonShape = transformer.transform(float(arr_coords_aux[0]), float(arr_coords_aux[1]))
+            padrones_lon.append(lonShape)
+            padrones_lat.append(latShape)
+        padrones_lon.append([None])
+        padrones_lat.append([None])
+    shape = go.Scattermapbox(fill = "toself",
+                            mode = "lines",
+                            lon = padrones_lon, lat = padrones_lat,
+                            marker = { 'size': 10, 'color': "orange" })
+    
+    shapes_padrones.append(shape)
+
+    
+
+
+    #pk.eyJ1IjoibmFodWVsMDAwIiwiYSI6ImNsZW11MGQ2YjAweXUzcnIxaHp4MTF2NGgifQ.aLPRn5aR6GNJ3QDIKbhFeg
+    #lonShape2, latShape2 = transformer.transform(arrayX2, arrayY2)
     # array_maps.append(map_tunelera)
     # array_maps.append(map_dis)
-    auxX = np.concatenate((latShape, [None], latShape2))
-    auxY = np.concatenate((lonShape, [None], lonShape2))
-    shape = go.Scattermapbox(
-        fill = "toself",
-        mode = "lines",
-        lon = auxX, lat = auxY,
-        marker = { 'size': 10, 'color': "orange" })
+    # auxX = np.concatenate((latShape, [None], latShape2))
+    # auxY = np.concatenate((lonShape, [None], lonShape2))
     
-    
-    array_maps.extend([map_angle, map_tunelera, map_dis, shape])
+    array_maps.extend([map_angle, map_tunelera, map_dis])
+    array_maps.extend(shapes_padrones)
+    array_maps.extend(closest_points)
     fig = go.Figure(data = array_maps)
     fig.update_layout(
         mapbox = dict(
-            accesstoken='pk.eyJ1IjoibmFodWVsMDAwIiwiYSI6ImNsZW11MGQ2YjAweXUzcnIxaHp4MTF2NGgifQ.aLPRn5aR6GNJ3QDIKbhFeg',
+            accesstoken = 'pk.eyJ1IjoibmFodWVsMDAwIiwiYSI6ImNsZW11MGQ2YjAweXUzcnIxaHp4MTF2NGgifQ.aLPRn5aR6GNJ3QDIKbhFeg',
             style = 'light', 
             center = go.layout.mapbox.Center(
                 lat = center_lat/len_array_puntos,
@@ -434,14 +476,15 @@ def distancia_entre_puntos(A, B):
     return math.sqrt(acum)
 
 def seleccionar_sub_tramo_list(x_dis, array_puntos)->list:
-    """_summary_
+    """Selecciona el subtramo dentro del tramo que esta a una distancia x_dis 
 
     Args:
-        x_dis (_type_): _description_
-        array_puntos (_type_): _description_
+        x_dis (_type_): distancia de tunelera a esquina AA
+        array_puntos (_type_): puntos
 
     Returns:
-        list: _description_
+        list: lista de puntos que conforman el subtramo correspondiente a la distanca x_dis
+        
     """
     
     
@@ -482,47 +525,10 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
     app.server.my_variable = 'Initial value'
     app.server.danger_type = ''
     app.server.many_points = True
-    #region Querys
-    #connectPG = psycopg2.connect("dbname=PGSEPS user=postgres password=eps host=10.60.0.245")            
-    #cursorPG = connectPG.cursor()
 
-    # datos del tramo
-    #cursorPG.execute("""SELECT tipotra, tiposec, GREATEST(dim1,dim2), LEAST(dim1,dim2), zarriba, zabajo, longitud FROM public."SS_Tramos"
-    #                    WHERE CAST(id AS character varying) = '%s';""", (AsIs(id_tramo),))
-                        
-    #datos = cursorPG.fetchall()
-    #print(datos)
-    # cota de terreno (punto inicial)
-    #cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = 
-    #                 (SELECT CAST((SELECT ST_X(ST_StartPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
-    #cota_inicial = cursorPG.fetchall()
-    #print("cotaInicical: " + str(cotaInicial))
-    #cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = (SELECT CAST((SELECT ST_X(ST_StartPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
-   # existe1 = cursorPG.fetchone()
-    #print("existe1: " + str(existe1))
-
-
-    # punto final
-    #cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = 
-    #                (SELECT CAST((SELECT ST_X(ST_EndPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
-    #cota_final = cursorPG.fetchall()
-   # print("cotaFinal: " + str(cotaFinal))
-    # punto final
-    #cursorPG.execute("""SELECT cota, id FROM "SS_Puntos" p WHERE CAST((SELECT ST_X(ST_GeometryN(p.geom,1))) AS numeric) = 
-    #                (SELECT CAST((SELECT ST_X(ST_EndPoint(ST_GeometryN(t.geom,1)))) AS numeric) FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s');""", (AsIs(id_tramo),))
-    #existe2 = cursorPG.fetchone()
-    
-    #cursorPG.execute("""SELECT CAST((SELECT ST_X(ST_StartPoint(ST_GeometryN(t.geom, 1)))) AS numeric), CAST((SELECT ST_Y(ST_StartPoint(ST_GeometryN(t.geom, 1)))) AS numeric),
-    #                   CAST((SELECT ST_X(ST_EndPoint(ST_GeometryN(t.geom, 1)))) AS numeric), CAST((SELECT ST_Y(ST_EndPoint(ST_GeometryN(t.geom, 1)))) AS numeric)
-    #                    FROM "SS_Tramos" t WHERE CAST(id AS character varying) = '%s';""", (AsIs(id_tramo),))
-    #[0] X de startPoint, [1] Y de startPoint, [2] endPoint, [3] endPoint
-    #coords_puntos_tapas = cursorPG.fetchone()
-    
-    #endregion
     
     id_tramo = abs(int(id_tramo))
     if int(id_tramo) == 0:
-        print("id = 0")
         app.server.my_variable = 'Danger!!'
 
     datos_CSV = csv_data_tramos.iloc[int(id_tramo)][1:8]
@@ -671,6 +677,24 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
     r3 = y_redzone_1 - x3
     r4 = y_redzone_2 - x4
 
+
+    def recta_zampeado(X) -> float:
+        """recta que interpola los zampeados zarriba y zabajo
+
+        Args:
+            X (float): valor de X a evaluar en la recta
+
+        Returns:
+            float: devuelve el valor interpolado del zampeado en X
+        """
+ 
+        y2 = zarriba
+        y1 = zabajo
+        x2 = datos[0][6]
+        x1 = 0
+        pendiente = (y2 - y1) / (x2 - x1) 
+        return pendiente * X - (pendiente*x1) + y1
+    
     ###################################    ######################################################################################################
     # FUNCION PARA CREAR CILINDROS 3D #    #RETORNA UNA MESH3D DEL CILINDRO Y DOS MATRICES CON LAS COORDS DE LAS CIRCUNFERENECIAS QUE LO FORMAN #
     ###################################    ######################################################################################################
@@ -997,9 +1021,7 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
                                     arrowhead = 1,
                                     xanchor = 'left',
                                     bordercolor = 'rgba(50, 200, 50, 1)', 
-                                    bgcolor = 'rgba(50, 220, 50, .3)',
-
-                                    )
+                                    bgcolor = 'rgba(50, 220, 50, .3)',)
                                     ]
                     )
                 
@@ -1243,6 +1265,17 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
                   showarrow = False,
                   textangle = 0
             )
+            fig.add_trace(go.Scatter(x = [dis_esquina, dis_esquina],
+                                     y = [recta_terreno(dis_esquina), profundidad_reltaiva + diametro_tunelera/2],
+                                     text=['', ''],
+                                     mode = 'lines',
+                                     dash = 'dot',
+                                     line = dict(color = 'black', width = 2)))
+            
+            fig.add_annotation(text = str(round(abs((profundidad_reltaiva + diametro_tunelera/2) - recta_terreno(dis_esquina)), 2))+'m',
+                            x = dis_esquina,
+                            y = (recta_terreno(dis_esquina)+(profundidad_reltaiva + diametro_tunelera/2))/2,
+                            textangle = 0)
                 
                 
         min_y = np.min([y_redzone_1, y_redzone_2, y_redzone_12, y_redzone_22])
@@ -1320,7 +1353,7 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
                 showlegend = False
             ))
             fig.add_annotation(text= str(round(cota_inicial[0][0] - y_redzone_1, 2))+'m',
-                  x= (-lin_V_offset)*2 - 2, y=(cota_inicial[0][0] + y_dis_redZone_3)/2, showarrow=False,
+                  x = (-lin_V_offset)*2 - 2, y=(cota_inicial[0][0] + y_dis_redZone_3)/2, showarrow=False,
                   textangle = -90
             )  
 
@@ -1333,10 +1366,19 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
                 line = dict(color = "black", width = 2),
                 showlegend = False
             ))  
-            fig.add_annotation(text=  str(round(cota_final[0][0] - y_redzone_2, 2))+'m',
-                  x=  xf + (lin_V_offset)*2 + 2, y = (cota_final[0][0] + y_dis_redZone_4)/2, showarrow=False,
+            fig.add_annotation(text = str(round(cota_final[0][0] - y_redzone_2, 2))+'m',
+                  x = xf + (lin_V_offset)*2 + 2, y = (cota_final[0][0] + y_dis_redZone_4)/2, showarrow=False,
                   textangle = -90
             )  
+
+            
+            
+
+            
+            fig.add_annotation(text = 'Zampeado: ' + str(round(recta_zampeado(dis_esquina), 2)),
+                            x = dis_esquina,
+                            y = recta_terreno(dis_esquina)-.15)
+
         #endregion
         fig.update_layout(scene_xaxis_visible = False, 
                           scene_yaxis_visible = False, 
@@ -1358,7 +1400,7 @@ def create_graph(id_tramo, diametro_tunelera, profundidad_tunelera, dis_esquina,
                       [cota_final[0][0], zabajo, datos[0][3], pendiente_tramo_porcentaje, coords_puntos_tapas[0], coords_puntos_tapas[1], cota_final[0][1]],
                       [xf, datos[0][0], datos[0][1]]]
 
-    
+  
     
 
     return [fig, make_graphic_2D(), datos_to_tabla]
@@ -1530,7 +1572,7 @@ def invocarFunJs():
     script = f"document.getElementById('map-iframe').contentWindow.invocarDesdePython('{'perro'}')"
     return script
 
-
+invocarFunJs()
 
 @app.callback(
     [
